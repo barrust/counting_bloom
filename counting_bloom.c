@@ -44,6 +44,7 @@ int counting_bloom_destroy(CountingBloom *cb) {
 int counting_bloom_add_string(CountingBloom *cb, char *str) {
 	uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
 	int r = counting_bloom_add_string_alt(cb, hashes, cb->number_hashes);
+	free(hashes);
 	return r;
 }
 
