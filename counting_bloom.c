@@ -69,7 +69,6 @@ int counting_bloom_check_string(CountingBloom *cb, char *str) {
 	int r = counting_bloom_check_string_alt(cb, hashes, cb->number_hashes);
 	free(hashes);
 	return r;
-
 }
 
 int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed) {
@@ -92,8 +91,9 @@ int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigne
 // a better way would be to calculate the hashes only once...
 int counting_bloom_get_max_insertions(CountingBloom *cb, char *str) {
 	uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
-	return counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
+	int r = counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
 	free(hashes);
+	return r;
 }
 
 int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed) {
@@ -108,6 +108,28 @@ int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, u
 		}
 	}
 	return res;
+}
+
+int counting_bloom_remove_string(CountingBloom *cb, char *str) {
+	uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+	int r = counting_bloom_remove_string_alt(cb, hashes, cb->number_hashes);
+	free(hashes);
+	return r;
+}
+
+int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+	if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
+		return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
+	}
+	int i, completly_removed;
+	for (i = 0; i < cb->number_hashes; i++) {
+		uint64_t idx = hashes[i] % cb->number_bits;
+		if (cb->bloom[idx] != UINT_MAX) {
+			cb->bloom[idx]--;
+		}
+	}
+	cb->elements_added--; // this would need to be modified if we don't add for each 
+	return COUNTING_BLOOM_SUCCESS;
 }
 
 uint64_t* counting_bloom_calculate_hashes(CountingBloom *cb, char *str, unsigned int number_hashes) {
