@@ -90,19 +90,22 @@ int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigne
 
 // a better way would be to calculate the hashes only once...
 int counting_bloom_get_max_insertions(CountingBloom *cb, char *str) {
-	if (counting_bloom_check_string(cb, str) == COUNTING_BLOOM_FAILURE) {
-		return 0;
-	}
-	int res = UINT_MAX;
 	uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
-	int i;
+	return counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
+	free(hashes);
+}
+
+int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+	if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
+		return 0; // this means it isn't present; fail-quick
+	}
+	int i, res = UINT_MAX; // set this to the max and work down
 	for (i = 0; i < cb->number_hashes; i++) {
 		uint64_t idx = hashes[i] % cb->number_bits;
 		if (cb->bloom[idx] < res) {
 			res = cb->bloom[idx];
 		}
 	}
-	free(hashes);
 	return res;
 }
 

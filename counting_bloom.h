@@ -9,7 +9,7 @@
 ***
 ***	 License: MIT 2015
 ***
-***	 URL:
+***	 URL:	https://github.com/barrust/counting_bloom
 ***
 ***	 Usage:
 ***
@@ -29,6 +29,10 @@
 #include <string.h>         /* strlen */
 #include <limits.h>         /* UINT_MAX */
 #include <openssl/md5.h>
+
+#ifdef __APPLE__
+	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 #define COUNTING_BLOOMFILTER_VERSION "0.5.0"
 #define COUNTING_BLOOMFILTER_MAJOR 0
@@ -71,6 +75,8 @@ int counting_bloom_check_string(CountingBloom *cb, char *str);
 int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
 int counting_bloom_get_max_insertions(CountingBloom *cb, char *str);
+
+int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* not implemented */
 int counting_bloom_remove_string(CountingBloom *cb, char *str);
