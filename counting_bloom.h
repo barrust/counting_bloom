@@ -62,6 +62,9 @@ typedef struct counting_bloom_filter {
 int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
 
 /* not implemented */
+int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
+
+/* not implemented */
 void counting_bloom_stats(CountingBloom *cb);
 
 int counting_bloom_destroy(CountingBloom *cb);
@@ -88,6 +91,9 @@ int counting_bloom_export(CountingBloom *cb, char *filepath);
 
 /* not implemented */
 int counting_bloom_import(CountingBloom *cb, char *filepath, HashFunction hash_function);
+
+/* not implemented */
+int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath, HashFunction hash_function);
 
 float counting_bloom_current_false_positive_rate(CountingBloom *cb);
 
