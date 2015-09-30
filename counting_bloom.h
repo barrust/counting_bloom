@@ -66,6 +66,8 @@ int counting_bloom_add_string(CountingBloom *cb, char *str);
 
 int counting_bloom_add_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
+int counting_bloom_check_string(CountingBloom *cb, char *str);
+
 int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
 int counting_bloom_get_max_insertions(CountingBloom *cb, char *str);
@@ -74,10 +76,10 @@ int counting_bloom_get_max_insertions(CountingBloom *cb, char *str);
 int counting_bloom_remove_string(CountingBloom *cb, char *str);
 
 /* not implemented */
-int counting_bloom_import_on_disk(BloomFilter *bf, char *filepath, HashFunction hash_function);
+int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath, HashFunction hash_function);
 
 /* not implemented */
-int counting_bloom_export(BloomFilter *bf, char *filepath);
+int counting_bloom_export(CountingBloom *cb, char *filepath);
 
 float counting_bloom_current_false_positive_rate(CountingBloom *cb);
 
