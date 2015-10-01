@@ -4,7 +4,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 0.5.2
+***	 Version: 0.6.0
 ***	 Purpose: Simple, yet effective, counting bloom filter implementation
 ***
 ***	 License: MIT 2015
@@ -34,10 +34,10 @@
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define COUNTING_BLOOMFILTER_VERSION "0.5.2"
+#define COUNTING_BLOOMFILTER_VERSION "0.6.0"
 #define COUNTING_BLOOMFILTER_MAJOR 0
-#define COUNTING_BLOOMFILTER_MINOR 5
-#define COUNTING_BLOOMFILTER_REVISION 2
+#define COUNTING_BLOOMFILTER_MINOR 6
+#define COUNTING_BLOOMFILTER_REVISION 0
 
 #define COUNTING_BLOOM_SUCCESS 0
 #define COUNTING_BLOOM_FAILURE -1
@@ -85,11 +85,11 @@ int counting_bloom_remove_string(CountingBloom *cb, char *str);
 
 int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
-/* not implemented */
 int counting_bloom_export(CountingBloom *cb, char *filepath);
 
-/* not implemented */
-int counting_bloom_import(CountingBloom *cb, char *filepath, HashFunction hash_function);
+int counting_bloom_import(CountingBloom *cb, char *filepath);
+
+int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction hash_function);
 
 /* not implemented */
 int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath, HashFunction hash_function);

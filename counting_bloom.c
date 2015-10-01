@@ -17,6 +17,8 @@ static const double LOG_TWO_SQUARED = 0.4804530139182;
 *******************************************************************************/
 static uint64_t* md5_hash_default(int num_hashes, char *str);
 static void calculate_optimal_hashes(CountingBloom *cb);
+static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
+static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
 
 
 /*******************************************************************************
@@ -153,7 +155,35 @@ float counting_bloom_current_false_positive_rate(CountingBloom *cb) {
 	return pow((1 - e), cb->number_hashes);
 }
 
+int counting_bloom_export(CountingBloom *cb, char *filepath) {
+	FILE *fp;
+	fp = fopen(filepath, "w+b");
+	if (fp == NULL) {
+		fprintf(stderr, "Can't open file %s!\n", filepath);
+		return COUNTING_BLOOM_FAILURE;
+	}
+	write_to_file(cb, fp, 0);
+	fclose(fp);
+	return COUNTING_BLOOM_SUCCESS;
+}
 
+
+int counting_bloom_import(CountingBloom *cb, char *filepath) {
+	return counting_bloom_import_alt(cb, filepath, NULL);
+}
+
+int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction hash_function) {
+	FILE *fp;
+	fp = fopen(filepath, "r+b");
+	if (fp == NULL) {
+		fprintf(stderr, "Can't open file %s!\n", filepath);
+		return COUNTING_BLOOM_FAILURE;
+	}
+	read_from_file(cb, fp, 0, NULL);
+	fclose(fp);
+	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	return COUNTING_BLOOM_SUCCESS;
+}
 
 
 
@@ -193,4 +223,55 @@ static uint64_t* md5_hash_default(int num_hashes, char *str) {
 		results[i] = (uint64_t) *(uint64_t *)digest % UINT64_MAX;
 	}
 	return results;
+}
+
+/* NOTE: this assumes that the file handler is open and ready to use */
+static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
+	if (on_disk == 0) {
+		fwrite(cb->bloom, cb->number_bits, sizeof(unsigned int), fp);
+	} else {/* // this is for on disk implementation which isn't completed yet
+		// will need to write out everything by hand
+		uint64_t i;
+		int q = 0;
+
+		//fwrite(&q, 1, bf->bloom_length, fp);
+		for (i = 0; i < cb->number_bits; i++) {
+			fwrite(&q, 1, sizeof(unsigned int), fp);
+		}
+		*/
+	}
+	fwrite(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
+	fwrite(&cb->elements_added, sizeof(uint64_t), 1, fp);
+	fwrite(&cb->false_positive_probability, sizeof(float), 1, fp);
+}
+
+/* NOTE: this assumes that the file handler is open and ready to use */
+static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename) {
+	int offset = sizeof(uint64_t) * 2 + sizeof(float);
+	fseek(fp, offset * -1, SEEK_END);
+	fread(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
+	fread(&cb->elements_added, sizeof(uint64_t), 1, fp);
+	fread(&cb->false_positive_probability, sizeof(float), 1, fp);
+	calculate_optimal_hashes(cb);
+	rewind(fp);
+	if(on_disk == 0) {
+		cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
+		fread(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
+	} else { /* // this is for on disk implementation which isn't completed yet
+		struct stat buf;
+		int fd = open(filename, O_RDWR);
+		if (fd < 0) {
+			perror("open: ");
+			exit(1);
+		}
+		fstat(fd, &buf);
+		cb->__filesize = buf.st_size;
+		cb->bloom = mmap((caddr_t)0, bf->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		if (cb->bloom == (unsigned char*)-1) {
+			perror("mmap: ");
+			exit(1);
+		}
+		// close the file descriptor
+		close(fd);*/
+	}
 }
