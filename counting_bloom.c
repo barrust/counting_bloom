@@ -24,7 +24,12 @@ static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *fil
 /*******************************************************************************
 ***		PUBLIC FUNCTION DECLARATIONS
 *******************************************************************************/
-int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function) {
+int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate) {
+	return counting_bloom_init_alt(cb, estimated_elements, false_positive_rate, NULL);
+}
+
+
+int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function) {
 	if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
 		return COUNTING_BLOOM_FAILURE;
 	}
