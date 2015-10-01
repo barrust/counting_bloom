@@ -4,7 +4,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 0.7.0
+***	 Version: 0.7.1
 ***	 Purpose: Simple, yet effective, counting bloom filter implementation
 ***
 ***	 License: MIT 2015
@@ -28,16 +28,20 @@
 #include <stdio.h>          /* printf */
 #include <string.h>         /* strlen */
 #include <limits.h>         /* UINT_MAX */
+#include <fcntl.h>          /* O_RDWR */
+#include <sys/types.h>      /* */
+#include <sys/stat.h>       /* fstat */
+#include <sys/mman.h>       /* mmap, mummap */
 #include <openssl/md5.h>
 
 #ifdef __APPLE__
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define COUNTING_BLOOMFILTER_VERSION "0.7.0"
+#define COUNTING_BLOOMFILTER_VERSION "0.7.1"
 #define COUNTING_BLOOMFILTER_MAJOR 0
 #define COUNTING_BLOOMFILTER_MINOR 7
-#define COUNTING_BLOOMFILTER_REVISION 0
+#define COUNTING_BLOOMFILTER_REVISION 1
 
 #define COUNTING_BLOOM_SUCCESS 0
 #define COUNTING_BLOOM_FAILURE -1
@@ -56,6 +60,10 @@ typedef struct counting_bloom_filter {
 	unsigned int *bloom;
 	uint64_t elements_added;
 	HashFunction hash_function;
+	/* on disk handeling */
+	short __is_on_disk;
+	FILE *filepointer;
+	uint64_t __filesize;
 } CountingBloom;
 
 
@@ -63,8 +71,8 @@ int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float fa
 int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
 
 /* not implemented */
-int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate);
-int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
+int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath);
+int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function);
 
 /* not implemented */
 void counting_bloom_stats(CountingBloom *cb);
@@ -92,7 +100,6 @@ int counting_bloom_export(CountingBloom *cb, char *filepath);
 int counting_bloom_import(CountingBloom *cb, char *filepath);
 int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction hash_function);
 
-/* not implemented */
 int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath);
 int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFunction hash_function);
 

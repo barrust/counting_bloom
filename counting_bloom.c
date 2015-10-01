@@ -41,20 +41,29 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
 	calculate_optimal_hashes(cb);
 	cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
 	cb->elements_added = 0;
+	cb->__is_on_disk = 0;
 	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
 	return COUNTING_BLOOM_SUCCESS;
 }
 
 
 int counting_bloom_destroy(CountingBloom *cb) {
+	if (cb->__is_on_disk == 0) {
+		free(cb->bloom);
+	} else {
+		fclose(cb->filepointer);
+		munmap(cb->bloom, cb->__filesize);
+	}
 	cb->estimated_elements = 0;
 	cb->false_positive_probability = 0.0;
 	cb->number_hashes = 0;
 	cb->number_bits = 0;
-	free(cb->bloom);
 	cb->bloom = NULL;
 	cb->elements_added = 0;
 	cb->hash_function = NULL;
+	cb->__is_on_disk = 0;
+	cb->__filesize = 0;
+	cb->filepointer = NULL;
 	return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -78,6 +87,11 @@ int counting_bloom_add_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned 
 		}
 	}
 	cb->elements_added++;  // I could be convinced that if it is a duplicate than it shouldn't increment the elements added
+	if (cb->__is_on_disk == 1) {
+		int offset = sizeof(uint64_t) + sizeof(float);
+		fseek(cb->filepointer, offset * -1, SEEK_END);
+		fwrite(&cb->elements_added, 1, sizeof(uint64_t), cb->filepointer);
+	}
 	return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -192,6 +206,23 @@ int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction ha
 
 
 
+int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath) {
+	return counting_bloom_import_on_disk_alt(cb, filepath, NULL);
+}
+
+
+int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFunction hash_function) {
+	cb->filepointer = fopen(filepath, "r+b");
+	if (cb->filepointer == NULL) {
+		fprintf(stderr, "Can't open file %s!\n", filepath);
+		return COUNTING_BLOOM_FAILURE;
+	}
+	read_from_file(cb, cb->filepointer, 1, filepath);
+	// don't close the file pointer here...
+	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	cb->__is_on_disk = 1; // on disk
+	return COUNTING_BLOOM_SUCCESS;
+}
 
 
 
@@ -233,11 +264,11 @@ static uint64_t* md5_hash_default(int num_hashes, char *str) {
 /* NOTE: this assumes that the file handler is open and ready to use */
 static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 	if (on_disk == 0) {
-		fwrite(cb->bloom, cb->number_bits, sizeof(unsigned int), fp);
-	} else {/* // this is for on disk implementation which isn't completed yet
+		fwrite(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
+	} else { /*
 		// will need to write out everything by hand
 		uint64_t i;
-		int q = 0;
+		unsigned int q = 0;
 
 		//fwrite(&q, 1, bf->bloom_length, fp);
 		for (i = 0; i < cb->number_bits; i++) {
@@ -248,6 +279,7 @@ static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 	fwrite(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
 	fwrite(&cb->elements_added, sizeof(uint64_t), 1, fp);
 	fwrite(&cb->false_positive_probability, sizeof(float), 1, fp);
+
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
@@ -262,7 +294,7 @@ static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *fil
 	if(on_disk == 0) {
 		cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
 		fread(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
-	} else { /* // this is for on disk implementation which isn't completed yet
+	} else {  // this is for on disk implementation which isn't completed yet
 		struct stat buf;
 		int fd = open(filename, O_RDWR);
 		if (fd < 0) {
@@ -271,12 +303,12 @@ static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *fil
 		}
 		fstat(fd, &buf);
 		cb->__filesize = buf.st_size;
-		cb->bloom = mmap((caddr_t)0, bf->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-		if (cb->bloom == (unsigned char*)-1) {
+		cb->bloom = mmap((caddr_t)0, cb->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		if (cb->bloom == (unsigned int*)-1) {
 			perror("mmap: ");
 			exit(1);
 		}
 		// close the file descriptor
-		close(fd);*/
+		close(fd);
 	}
 }
