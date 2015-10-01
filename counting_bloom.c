@@ -1,6 +1,13 @@
-
-
-
+/*******************************************************************************
+***
+***	 Author: Tyler Barrus
+***	 email:  barrust@gmail.com
+***
+***	 Version:
+***
+***	 License: MIT 2015
+***
+*******************************************************************************/
 #include "counting_bloom.h"
 
 static const double LOG_TWO_SQUARED = 0.4804530139182;
@@ -12,6 +19,9 @@ static uint64_t* md5_hash_default(int num_hashes, char *str);
 static void calculate_optimal_hashes(CountingBloom *cb);
 
 
+/*******************************************************************************
+***		PUBLIC FUNCTION DECLARATIONS
+*******************************************************************************/
 int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function) {
 	if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
 		return COUNTING_BLOOM_FAILURE;
@@ -128,7 +138,7 @@ int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsign
 			cb->bloom[idx]--;
 		}
 	}
-	cb->elements_added--; // this would need to be modified if we don't add for each 
+	cb->elements_added--; // this would need to be modified if we don't add for each
 	return COUNTING_BLOOM_SUCCESS;
 }
 

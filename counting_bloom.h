@@ -81,7 +81,6 @@ int counting_bloom_get_max_insertions(CountingBloom *cb, char *str);
 
 int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
 
-/* not implemented */
 int counting_bloom_remove_string(CountingBloom *cb, char *str);
 
 int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned int number_hashes_passed);
