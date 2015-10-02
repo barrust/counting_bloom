@@ -62,13 +62,16 @@ int main(int argc, char **argv) {
 		printf("'test' was not found in the counting bloom!\n");
 	}
 	printf("Export the Counting Bloom!\n");
+	counting_bloom_stats(&cb);
 	counting_bloom_destroy(&cb);
 	printf("Exported and destroyed the original counting bloom!\n\n");
 
 	printf("Re-import the bloom filter on disk!\n");
 	CountingBloom cb1;
 	counting_bloom_import_on_disk_alt(&cb1, "./dist/test.cbm", &sha256_hash);
+	// add another string!
 	counting_bloom_add_string(&cb1, "outside");
+
 	if (counting_bloom_check_string(&cb1, "test") == COUNTING_BLOOM_SUCCESS) {
 		printf("'test' was found in the counting bloom with false positive rate of %f!\n", counting_bloom_current_false_positive_rate(&cb1));
 		printf("'test' is in the counting bloom a maximum of %d times!\n", counting_bloom_get_max_insertions(&cb1, "test"));
@@ -81,5 +84,6 @@ int main(int argc, char **argv) {
 	} else {
 		printf("'blah' was not found in the counting bloom!\n");
 	}
+	counting_bloom_stats(&cb1);
 	counting_bloom_destroy(&cb1);
 }

@@ -256,7 +256,21 @@ int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFun
 }
 
 
+void counting_bloom_stats(CountingBloom *cb) {
+	char *is_on_disk = (cb->__is_on_disk == 0 ? "no" : "yes");
 
+	printf("CountingBloom\n\
+	bits: %" PRIu64 "\n\
+	estimated elements: %" PRIu64 "\n\
+	number hashes: %d\n\
+	max false positive rate: %f\n\
+	elements added: %" PRIu64 "\n\
+	current false positive rate: %f\n\
+	is on disk: %s\n",
+	cb->number_bits, cb->estimated_elements, cb->number_hashes,
+	cb->false_positive_probability, cb->elements_added,
+	counting_bloom_current_false_positive_rate(cb), is_on_disk);
+}
 
 
 /*******************************************************************************

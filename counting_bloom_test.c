@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
 	} else {
 		printf("'test' was not found in the counting bloom!\n");
 	}
-
-	printf("Remove 'test' and re-test!!\n");
+	counting_bloom_stats(&cb);
+	printf("\nRemove 'test' and re-test!!\n");
 	counting_bloom_remove_string(&cb, "test");
 	if (counting_bloom_check_string(&cb, "test") == COUNTING_BLOOM_SUCCESS) {
 		printf("'test' was found in the counting bloom with false positive rate of %f!\n", counting_bloom_current_false_positive_rate(&cb));
@@ -47,6 +47,6 @@ int main(int argc, char **argv) {
 		printf("'test' was not found in the counting bloom!\n");
 	}
 
-
+	counting_bloom_stats(&cb);
 	counting_bloom_destroy(&cb);
 }

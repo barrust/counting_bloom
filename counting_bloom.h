@@ -73,7 +73,6 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
 int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath);
 int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function);
 
-/* not implemented */
 void counting_bloom_stats(CountingBloom *cb);
 
 int counting_bloom_destroy(CountingBloom *cb);
