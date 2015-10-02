@@ -3,7 +3,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version:
+***	 Version: 1.0.0
 ***
 ***	 License: MIT 2015
 ***
@@ -19,6 +19,7 @@ static uint64_t* md5_hash_default(int num_hashes, char *str);
 static void calculate_optimal_hashes(CountingBloom *cb);
 static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
 static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
+static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_t *largest_index,uint64_t *els_added, float *fullness);
 
 
 /*******************************************************************************
@@ -259,7 +260,13 @@ int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFun
 
 void counting_bloom_stats(CountingBloom *cb) {
 	char *is_on_disk = (cb->__is_on_disk == 0 ? "no" : "yes");
-
+	uint64_t largest, largest_index, calculated_elements;
+	float fullness;
+	__get_additional_stats(cb, &largest, &largest_index, &calculated_elements, &fullness);
+	/* additional stats needed:
+		distribution of idx (histogram?)
+		which index is used the most?
+	*/
 	printf("CountingBloom\n\
 	bits: %" PRIu64 "\n\
 	estimated elements: %" PRIu64 "\n\
@@ -267,10 +274,15 @@ void counting_bloom_stats(CountingBloom *cb) {
 	max false positive rate: %f\n\
 	elements added: %" PRIu64 "\n\
 	current false positive rate: %f\n\
-	is on disk: %s\n",
+	is on disk: %s\n\
+	index fullness: %f\n\
+	max index usage: %" PRIu64 "\n\
+	max index id: %" PRIu64 "\n\
+	calculated elements: %" PRIu64 "\n", // use this to make sure the numbers still match
 	cb->number_bits, cb->estimated_elements, cb->number_hashes,
 	cb->false_positive_probability, cb->elements_added,
-	counting_bloom_current_false_positive_rate(cb), is_on_disk);
+	counting_bloom_current_false_positive_rate(cb), is_on_disk,
+	fullness, largest, largest_index, calculated_elements);
 }
 
 
@@ -355,4 +367,19 @@ static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *fil
 		// close the file descriptor
 		close(fd);
 	}
+}
+
+
+static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_t *largest_index, uint64_t *els_added, float *fullness) {
+	uint64_t i, sum = 0, lar = 0, cnt = 0, lar_idx;
+	for (i = 0; i < cb->number_bits; i++) {
+		uint64_t tmp = cb->bloom[i];
+		sum += tmp;
+		if (tmp > lar) {lar = tmp; lar_idx = i;}
+		if (tmp > 0) {cnt++;}
+	}
+	*fullness = (cnt * 1.0) / cb->number_bits;
+	*els_added = (sum) / cb->number_hashes;
+	*largest = lar;
+	*largest_index = lar_idx;
 }
