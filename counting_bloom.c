@@ -47,6 +47,37 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
 }
 
 
+int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath) {
+	return counting_bloom_init_on_disk_alt(cb, estimated_elements, false_positive_rate, filepath, NULL);
+}
+
+
+int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function){
+	if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
+		return COUNTING_BLOOM_FAILURE;
+	}
+	if (false_positive_rate <= 0.0 || false_positive_rate >= 1.0 ) {
+		return COUNTING_BLOOM_FAILURE;
+	}
+	cb->estimated_elements = estimated_elements;
+	cb->false_positive_probability = false_positive_rate;
+	calculate_optimal_hashes(cb);
+	cb->elements_added = 0;
+	cb->__is_on_disk = 1;
+	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+
+	FILE *fp;
+	fp = fopen(filepath, "w+b");
+	if (fp == NULL) {
+		fprintf(stderr, "Can't open file %s!\n", filepath);
+		return COUNTING_BLOOM_FAILURE;
+	}
+	write_to_file(cb, fp, 1);
+	fclose(fp);
+	return counting_bloom_import_on_disk_alt(cb, filepath, hash_function);
+}
+
+
 int counting_bloom_destroy(CountingBloom *cb) {
 	if (cb->__is_on_disk == 0) {
 		free(cb->bloom);
@@ -265,16 +296,14 @@ static uint64_t* md5_hash_default(int num_hashes, char *str) {
 static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 	if (on_disk == 0) {
 		fwrite(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
-	} else { /*
+	} else {
 		// will need to write out everything by hand
 		uint64_t i;
 		unsigned int q = 0;
 
-		//fwrite(&q, 1, bf->bloom_length, fp);
 		for (i = 0; i < cb->number_bits; i++) {
 			fwrite(&q, 1, sizeof(unsigned int), fp);
 		}
-		*/
 	}
 	fwrite(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
 	fwrite(&cb->elements_added, sizeof(uint64_t), 1, fp);

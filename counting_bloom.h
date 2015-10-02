@@ -4,7 +4,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 0.7.1
+***	 Version: 0.8.0
 ***	 Purpose: Simple, yet effective, counting bloom filter implementation
 ***
 ***	 License: MIT 2015
@@ -38,10 +38,10 @@
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define COUNTING_BLOOMFILTER_VERSION "0.7.1"
+#define COUNTING_BLOOMFILTER_VERSION "0.8.0"
 #define COUNTING_BLOOMFILTER_MAJOR 0
-#define COUNTING_BLOOMFILTER_MINOR 7
-#define COUNTING_BLOOMFILTER_REVISION 1
+#define COUNTING_BLOOMFILTER_MINOR 8
+#define COUNTING_BLOOMFILTER_REVISION 0
 
 #define COUNTING_BLOOM_SUCCESS 0
 #define COUNTING_BLOOM_FAILURE -1
@@ -70,7 +70,6 @@ typedef struct counting_bloom_filter {
 int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate);
 int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
 
-/* not implemented */
 int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath);
 int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function);
 
