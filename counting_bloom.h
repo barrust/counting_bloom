@@ -4,7 +4,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 0.9.0
+***	 Version: 0.9.1
 ***	 Purpose: Simple, yet effective, counting bloom filter implementation
 ***
 ***	 License: MIT 2015
@@ -38,10 +38,10 @@
 	#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define COUNTING_BLOOMFILTER_VERSION "0.9.0"
+#define COUNTING_BLOOMFILTER_VERSION "0.9.1"
 #define COUNTING_BLOOMFILTER_MAJOR 0
 #define COUNTING_BLOOMFILTER_MINOR 9
-#define COUNTING_BLOOMFILTER_REVISION 0
+#define COUNTING_BLOOMFILTER_REVISION 1
 
 #define COUNTING_BLOOM_SUCCESS 0
 #define COUNTING_BLOOM_FAILURE -1

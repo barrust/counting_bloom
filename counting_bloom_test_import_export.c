@@ -48,6 +48,6 @@ int main(int argc, char **argv) {
 	} else {
 		printf("'blah' was not found in the counting bloom!\n");
 	}
-	//counting_bloom_stats(&cb1);
+	counting_bloom_stats(&cb1);
 	counting_bloom_destroy(&cb1);
 }

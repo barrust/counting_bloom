@@ -231,6 +231,7 @@ int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction ha
 	}
 	read_from_file(cb, fp, 0, NULL);
 	fclose(fp);
+	cb->__is_on_disk = 0;  // not on disk
 	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
 	return COUNTING_BLOOM_SUCCESS;
 }
