@@ -12,18 +12,18 @@
 ***	 URL:	https://github.com/barrust/counting_bloom
 ***
 ***	 Usage:
-*** 		CountingBloom cb;
-***			counting_bloom_init(&cb, 10, 0.01);
-***			counting_bloom_add_string(&cb, "google");
-***			counting_bloom_add_string(&cb, "facebook");
-***			counting_bloom_add_string(&cb, "twitter");
-***			counting_bloom_add_string(&cb, "google");
-***			if (counting_bloom_check_string(&cb, "google") == COUNTING_BLOOM_SUCCESS) {
-***				printf("'test' is in the counting bloom a maximum of %d times!\n", counting_bloom_get_max_insertions(&cb, "test"));
-***			}
-***			counting_bloom_remove_string(&cb, "google");
-***			counting_bloom_stats(&cb);
-***			counting_bloom_destroy(&cb);
+***        CountingBloom cb;
+***        counting_bloom_init(&cb, 10, 0.01);
+***        counting_bloom_add_string(&cb, "google");
+***        counting_bloom_add_string(&cb, "facebook");
+***        counting_bloom_add_string(&cb, "twitter");
+***        counting_bloom_add_string(&cb, "google");
+***        if (counting_bloom_check_string(&cb, "google") == COUNTING_BLOOM_SUCCESS) {
+***        	printf("'test' is in the counting bloom a maximum of %d times!\n", counting_bloom_get_max_insertions(&cb, "test"));
+***        }
+***        counting_bloom_remove_string(&cb, "google");
+***        counting_bloom_stats(&cb);
+***        counting_bloom_destroy(&cb);
 ***
 ***	Required Compile Flags: -lm -lcrypto
 ***

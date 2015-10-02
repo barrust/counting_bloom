@@ -327,7 +327,6 @@ static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 		// will need to write out everything by hand
 		uint64_t i;
 		unsigned int q = 0;
-
 		for (i = 0; i < cb->number_bits; i++) {
 			fwrite(&q, 1, sizeof(unsigned int), fp);
 		}
