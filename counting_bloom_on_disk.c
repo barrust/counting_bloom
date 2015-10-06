@@ -32,7 +32,7 @@ uint64_t* sha256_hash(int num_hashes, char *str) {
 			SHA256_Update(&sha256_ctx, digest, SHA256_DIGEST_LENGTH);
 		}
 		SHA256_Final(digest, &sha256_ctx);
-		results[i] = (uint64_t) *(uint64_t *)digest % UINT64_MAX;
+		results[i] = (uint64_t) *(uint64_t *)digest;
 	}
 	free(tmp_str);
 	return results;
