@@ -28,4 +28,4 @@ counting_bloom_destroy(&cb);
 ```
 
 ## Required Compile Flags:
--lm -lcrypto
+-lm

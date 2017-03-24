@@ -18,7 +18,6 @@
 #include <sys/types.h>      /* */
 #include <sys/stat.h>       /* fstat */
 #include <sys/mman.h>       /* mmap, mummap */
-#include <openssl/md5.h>
 
 #include "counting_bloom.h"
 
