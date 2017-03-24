@@ -29,6 +29,7 @@ static const double LOG_TWO_SQUARED = 0.4804530139182;
 ***		PRIVATE FUNCTIONS
 *******************************************************************************/
 static uint64_t* __default_hash(int num_hashes, char *str);
+static uint64_t __fnv_1a(char *key);
 static void __calculate_optimal_hashes(CountingBloom *cb);
 static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
 static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
@@ -197,7 +198,7 @@ int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsign
 	if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
 		return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
 	}
-	int i, completly_removed;
+	int i;
 	for (i = 0; i < cb->number_hashes; i++) {
 		uint64_t idx = hashes[i] % cb->number_bits;
 		if (cb->bloom[idx] != UINT_MAX) {
@@ -316,20 +317,31 @@ static void __calculate_optimal_hashes(CountingBloom *cb) {
 /* NOTE: The caller will free the results */
 static uint64_t* __default_hash(int num_hashes, char *str) {
 	uint64_t *results = calloc(num_hashes, sizeof(uint64_t));
-	unsigned char digest[MD5_DIGEST_LENGTH];
 	int i;
+	char *key = calloc(17, sizeof(char));  // largest value is 7FFF,FFFF,FFFF,FFFF
 	for (i = 0; i < num_hashes; i++) {
-		MD5_CTX md5_ctx;
-		MD5_Init(&(md5_ctx));
 		if (i == 0) {
-			MD5_Update(&(md5_ctx), str, strlen(str));
+			results[i] = __fnv_1a(str);
 		} else {
-			MD5_Update(&(md5_ctx), digest, MD5_DIGEST_LENGTH);
+			uint64_t prev = results[i-1];
+			memset(key, 0, 17);
+			sprintf(key, "%" PRIx64 "", prev);
+			results[i] = __fnv_1a(key);
 		}
-		MD5_Final(digest, &(md5_ctx));
-		results[i] = (uint64_t) *(uint64_t *)digest;
 	}
+	free(key);
 	return results;
+}
+
+static uint64_t __fnv_1a(char *key) {
+	// FNV-1a hash (http://www.isthe.com/chongo/tech/comp/fnv/)
+	int i, len = strlen(key);
+	uint64_t h = 14695981039346656073ULL; // FNV_OFFSET 64 bit
+	for (i = 0; i < len; i++){
+			h = h ^ (unsigned char) key[i];
+			h = h * 1099511628211ULL; // FNV_PRIME 64 bit
+	}
+	return h;
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
