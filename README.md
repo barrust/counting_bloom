@@ -5,11 +5,11 @@ A counting bloom filter is similar to a standard bloom filter except that instea
 of using bits, one increments each index in the array. This allows for the removal
 of items from the filter.
 
-##License:
+## License:
 MIT 2015
 
-##Usage:
-```
+## Usage:
+``` c
 #include "counting_bloom.h"
 
 
@@ -27,5 +27,5 @@ counting_bloom_stats(&cb);
 counting_bloom_destroy(&cb);
 ```
 
-##Required Compile Flags:
+## Required Compile Flags:
 -lm -lcrypto

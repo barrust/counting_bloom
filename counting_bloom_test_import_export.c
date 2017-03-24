@@ -1,4 +1,9 @@
 
+
+#include <stdlib.h>         /* calloc, malloc */
+#include <stdio.h>          /* printf */
+#include <string.h>         /* strlen */
+
 #include "counting_bloom.h"
 
 #define verbose 0

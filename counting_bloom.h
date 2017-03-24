@@ -33,17 +33,8 @@
 #ifndef __COUNTING_BLOOM_FILTER_H__
 #define __COUNTING_BLOOM_FILTER_H__
 
-#include <stdlib.h>         /* calloc, malloc */
 #include <inttypes.h>       /* PRIu64 */
-#include <math.h>           /* pow, exp */
-#include <stdio.h>          /* printf */
-#include <string.h>         /* strlen */
-#include <limits.h>         /* UINT_MAX */
-#include <fcntl.h>          /* O_RDWR */
-#include <sys/types.h>      /* */
-#include <sys/stat.h>       /* fstat */
-#include <sys/mman.h>       /* mmap, mummap */
-#include <openssl/md5.h>
+
 
 #ifdef __APPLE__
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"

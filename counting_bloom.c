@@ -8,17 +8,30 @@
 ***	 License: MIT 2015
 ***
 *******************************************************************************/
+#include <math.h>           /* pow, exp */
+#include <stdlib.h>         /* calloc, malloc */
+#include <stdio.h>          /* printf */
+#include <string.h>         /* strlen */
+#include <limits.h>         /* UINT_MAX */
+#include <fcntl.h>          /* open, O_RDWR */
+#include <unistd.h>         /* for close */
+#include <sys/types.h>      /* */
+#include <sys/stat.h>       /* fstat */
+#include <sys/mman.h>       /* mmap, mummap */
+#include <openssl/md5.h>
+
 #include "counting_bloom.h"
+
 
 static const double LOG_TWO_SQUARED = 0.4804530139182;
 
 /*******************************************************************************
 ***		PRIVATE FUNCTIONS
 *******************************************************************************/
-static uint64_t* md5_hash_default(int num_hashes, char *str);
-static void calculate_optimal_hashes(CountingBloom *cb);
-static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
-static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
+static uint64_t* __default_hash(int num_hashes, char *str);
+static void __calculate_optimal_hashes(CountingBloom *cb);
+static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
+static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
 static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_t *largest_index,uint64_t *els_added, float *fullness);
 
 
@@ -39,11 +52,11 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
 	}
 	cb->estimated_elements = estimated_elements;
 	cb->false_positive_probability = false_positive_rate;
-	calculate_optimal_hashes(cb);
+	__calculate_optimal_hashes(cb);
 	cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
 	cb->elements_added = 0;
 	cb->__is_on_disk = 0;
-	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
 	return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -62,10 +75,10 @@ int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elemen
 	}
 	cb->estimated_elements = estimated_elements;
 	cb->false_positive_probability = false_positive_rate;
-	calculate_optimal_hashes(cb);
+	__calculate_optimal_hashes(cb);
 	cb->elements_added = 0;
 	cb->__is_on_disk = 1;
-	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
 
 	FILE *fp;
 	fp = fopen(filepath, "w+b");
@@ -73,7 +86,7 @@ int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elemen
 		fprintf(stderr, "Can't open file %s!\n", filepath);
 		return COUNTING_BLOOM_FAILURE;
 	}
-	write_to_file(cb, fp, 1);
+	__write_to_file(cb, fp, 1);
 	fclose(fp);
 	return counting_bloom_import_on_disk_alt(cb, filepath, hash_function);
 }
@@ -213,7 +226,7 @@ int counting_bloom_export(CountingBloom *cb, char *filepath) {
 		fprintf(stderr, "Can't open file %s!\n", filepath);
 		return COUNTING_BLOOM_FAILURE;
 	}
-	write_to_file(cb, fp, 0);
+	__write_to_file(cb, fp, 0);
 	fclose(fp);
 	return COUNTING_BLOOM_SUCCESS;
 }
@@ -230,10 +243,10 @@ int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction ha
 		fprintf(stderr, "Can't open file %s!\n", filepath);
 		return COUNTING_BLOOM_FAILURE;
 	}
-	read_from_file(cb, fp, 0, NULL);
+	__read_from_file(cb, fp, 0, NULL);
 	fclose(fp);
 	cb->__is_on_disk = 0;  // not on disk
-	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
 	return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -250,9 +263,9 @@ int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFun
 		fprintf(stderr, "Can't open file %s!\n", filepath);
 		return COUNTING_BLOOM_FAILURE;
 	}
-	read_from_file(cb, cb->filepointer, 1, filepath);
+	__read_from_file(cb, cb->filepointer, 1, filepath);
 	// don't close the file pointer here...
-	cb->hash_function = (hash_function == NULL) ? md5_hash_default : hash_function;
+	cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
 	cb->__is_on_disk = 1; // on disk
 	return COUNTING_BLOOM_SUCCESS;
 }
@@ -289,7 +302,7 @@ void counting_bloom_stats(CountingBloom *cb) {
 /*******************************************************************************
 ***		PRIVATE FUNCTIONS
 *******************************************************************************/
-static void calculate_optimal_hashes(CountingBloom *cb) {
+static void __calculate_optimal_hashes(CountingBloom *cb) {
 	// calc optimized values
 	long n = cb->estimated_elements;
 	float p = cb->false_positive_probability;
@@ -301,7 +314,7 @@ static void calculate_optimal_hashes(CountingBloom *cb) {
 }
 
 /* NOTE: The caller will free the results */
-static uint64_t* md5_hash_default(int num_hashes, char *str) {
+static uint64_t* __default_hash(int num_hashes, char *str) {
 	uint64_t *results = calloc(num_hashes, sizeof(uint64_t));
 	unsigned char digest[MD5_DIGEST_LENGTH];
 	int i;
@@ -320,7 +333,7 @@ static uint64_t* md5_hash_default(int num_hashes, char *str) {
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
-static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
+static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 	if (on_disk == 0) {
 		fwrite(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
 	} else {
@@ -338,13 +351,13 @@ static void write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
-static void read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename) {
+static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename) {
 	int offset = sizeof(uint64_t) * 2 + sizeof(float);
 	fseek(fp, offset * -1, SEEK_END);
 	fread(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
 	fread(&cb->elements_added, sizeof(uint64_t), 1, fp);
 	fread(&cb->false_positive_probability, sizeof(float), 1, fp);
-	calculate_optimal_hashes(cb);
+	__calculate_optimal_hashes(cb);
 	rewind(fp);
 	if(on_disk == 0) {
 		cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
