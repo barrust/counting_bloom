@@ -4,7 +4,7 @@
 #include <stdio.h>          /* printf */
 #include <string.h>         /* strlen */
 
-#include "counting_bloom.h"
+#include "../src/counting_bloom.h"
 
 #define verbose 0
 

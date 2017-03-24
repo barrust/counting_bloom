@@ -5,7 +5,7 @@
 #include <string.h>         /* strlen */
 #include <openssl/sha.h>
 
-#include "counting_bloom.h"
+#include "../src/counting_bloom.h"
 
 #define verbose 0
 
