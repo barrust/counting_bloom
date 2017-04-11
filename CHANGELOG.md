@@ -3,6 +3,7 @@
 ### Version 1.0.1
 * Changed default hash algorithm to FNV-1a
   * Removed need for -lcrypto
+* Unique HashFunction type when using with related libraries
 
 ### Version 1.0.0
 * Basic counting bloom filter implementation

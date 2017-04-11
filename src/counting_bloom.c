@@ -3,7 +3,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 1.0.0
+***	 Version: 1.0.1
 ***
 ***	 License: MIT 2015
 ***
@@ -43,7 +43,7 @@ int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float fa
 }
 
 
-int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function) {
+int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function) {
 	if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
 		return COUNTING_BLOOM_FAILURE;
 	}
@@ -66,7 +66,7 @@ int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, 
 }
 
 
-int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function){
+int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, CountBloomHashFunction hash_function){
 	if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
 		return COUNTING_BLOOM_FAILURE;
 	}
@@ -236,7 +236,7 @@ int counting_bloom_import(CountingBloom *cb, char *filepath) {
 	return counting_bloom_import_alt(cb, filepath, NULL);
 }
 
-int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction hash_function) {
+int counting_bloom_import_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function) {
 	FILE *fp;
 	fp = fopen(filepath, "r+b");
 	if (fp == NULL) {
@@ -257,7 +257,7 @@ int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath) {
 }
 
 
-int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFunction hash_function) {
+int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function) {
 	cb->filepointer = fopen(filepath, "r+b");
 	if (cb->filepointer == NULL) {
 		fprintf(stderr, "Can't open file %s!\n", filepath);
