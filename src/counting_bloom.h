@@ -4,7 +4,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 1.0.0
+***	 Version: 1.0.1
 ***	 Purpose: Simple, yet effective, counting bloom filter implementation
 ***
 ***	 License: MIT 2015
@@ -30,8 +30,8 @@
 *******************************************************************************/
 
 
-#ifndef __COUNTING_BLOOM_FILTER_H__
-#define __COUNTING_BLOOM_FILTER_H__
+#ifndef BARRUST_COUNTING_BLOOM_FILTER_H__
+#define BARRUST_COUNTING_BLOOM_FILTER_H__
 
 #include <inttypes.h>       /* PRIu64 */
 
@@ -40,17 +40,17 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#define COUNTING_BLOOMFILTER_VERSION "1.0.0"
+#define COUNTING_BLOOMFILTER_VERSION "1.0.1"
 #define COUNTING_BLOOMFILTER_MAJOR 1
 #define COUNTING_BLOOMFILTER_MINOR 0
-#define COUNTING_BLOOMFILTER_REVISION 0
+#define COUNTING_BLOOMFILTER_REVISION 1
 
 #define COUNTING_BLOOM_SUCCESS 0
 #define COUNTING_BLOOM_FAILURE -1
 
 #define counting_bloom_get_version()	(COUNTING_BLOOMFILTER_VERSION)
 
-typedef uint64_t* (*HashFunction)       (int num_hashes, char *str);
+typedef uint64_t* (*CountBloomHashFunction)       (int num_hashes, char *str);
 
 typedef struct counting_bloom_filter {
 	/* bloom parameters */
@@ -61,7 +61,7 @@ typedef struct counting_bloom_filter {
 	/* bloom filter */
 	unsigned int *bloom;
 	uint64_t elements_added;
-	HashFunction hash_function;
+	CountBloomHashFunction hash_function;
 	/* on disk handeling */
 	short __is_on_disk;
 	FILE *filepointer;
@@ -76,11 +76,11 @@ typedef struct counting_bloom_filter {
 	False positive rate is 0.0 < x < 1.0
 */
 int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate);
-int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, HashFunction hash_function);
+int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function);
 
 /* Initialize a counting bloom directly into file; useful if the counting bloom is larger than available RAM */
 int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath);
-int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, HashFunction hash_function);
+int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, CountBloomHashFunction hash_function);
 
 /* Print out statistics about the counting bloom filter */
 void counting_bloom_stats(CountingBloom *cb);
@@ -117,7 +117,7 @@ int counting_bloom_export(CountingBloom *cb, char *filepath);
 
 /* Import a previously exported counting bloom from a file into memory */
 int counting_bloom_import(CountingBloom *cb, char *filepath);
-int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction hash_function);
+int counting_bloom_import_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function);
 
 /*
 	Import a previously exported counting bloom from a file but do not pull the full bloom into memory.
@@ -125,7 +125,7 @@ int counting_bloom_import_alt(CountingBloom *cb, char *filepath, HashFunction ha
 	into RAM.
 */
 int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath);
-int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, HashFunction hash_function);
+int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function);
 
 /* Calculates the current false positive rate based on the number of inserted elements */
 float counting_bloom_current_false_positive_rate(CountingBloom *cb);

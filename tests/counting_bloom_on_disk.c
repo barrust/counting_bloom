@@ -5,15 +5,10 @@
 #include <string.h>         /* strlen */
 #include <openssl/sha.h>
 
-#include "counting_bloom.h"
+#include "../src/counting_bloom.h"
 
 #define verbose 0
 
-int convert_to_upper(char *str) {
-	while(*str != '\0') {
-		 *str++ = toupper(*str);
-	}
-}
 
 /*
 	Example of generating a custom hashing function; in this case, we want each
