@@ -53,27 +53,27 @@
 typedef uint64_t* (*CountBloomHashFunction)       (int num_hashes, char *str);
 
 typedef struct counting_bloom_filter {
-	/* bloom parameters */
-	uint64_t estimated_elements;
-	float false_positive_probability;
-	unsigned int number_hashes;
-	uint64_t number_bits;
-	/* bloom filter */
-	unsigned int *bloom;
-	uint64_t elements_added;
-	CountBloomHashFunction hash_function;
-	/* on disk handeling */
-	short __is_on_disk;
-	FILE *filepointer;
-	uint64_t __filesize;
+    /* bloom parameters */
+    uint64_t estimated_elements;
+    float false_positive_probability;
+    unsigned int number_hashes;
+    uint64_t number_bits;
+    /* bloom filter */
+    unsigned int *bloom;
+    uint64_t elements_added;
+    CountBloomHashFunction hash_function;
+    /* on disk handeling */
+    short __is_on_disk;
+    FILE *filepointer;
+    uint64_t __filesize;
 } CountingBloom;
 
 /*
-	Initialize a standard counting bloom filter in memory; this will provide 'optimal' size
-	and hash numbers.
+    Initialize a standard counting bloom filter in memory; this will provide 'optimal' size
+    and hash numbers.
 
-	Estimated elements is 0 < x <= UINT64_MAX.
-	False positive rate is 0.0 < x < 1.0
+    Estimated elements is 0 < x <= UINT64_MAX.
+    False positive rate is 0.0 < x < 1.0
 */
 int counting_bloom_init(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate);
 int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function);
@@ -120,9 +120,9 @@ int counting_bloom_import(CountingBloom *cb, char *filepath);
 int counting_bloom_import_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function);
 
 /*
-	Import a previously exported counting bloom from a file but do not pull the full bloom into memory.
-	This is allows for the speed / storage trade off of not needing to put the full counting bloom
-	into RAM.
+    Import a previously exported counting bloom from a file but do not pull the full bloom into memory.
+    This is allows for the speed / storage trade off of not needing to put the full counting bloom
+    into RAM.
 */
 int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath);
 int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function);
@@ -131,11 +131,11 @@ int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, CountBl
 float counting_bloom_current_false_positive_rate(CountingBloom *cb);
 
 /*
-	Generate the number of hashes using the counting blooms hashing function. This is
-	useful when needing to either add or check the same string to several counting
-	blooms that use the same hash function.
+    Generate the number of hashes using the counting blooms hashing function. This is
+    useful when needing to either add or check the same string to several counting
+    blooms that use the same hash function.
 
-	NOTE: It is up to the caller to free the allocated memory
+    NOTE: It is up to the caller to free the allocated memory
 */
 uint64_t* counting_bloom_calculate_hashes(CountingBloom *cb, char *str, unsigned int number_hashes);
 
