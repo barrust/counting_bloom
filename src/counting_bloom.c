@@ -3,7 +3,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 1.0.1
+***	 Version: 1.0.2
 ***
 ***	 License: MIT 2015
 ***
@@ -27,11 +27,11 @@ static const double LOG_TWO_SQUARED = 0.4804530139182;
 /*******************************************************************************
 ***		PRIVATE FUNCTIONS
 *******************************************************************************/
-static uint64_t* __default_hash(int num_hashes, char *str);
-static uint64_t __fnv_1a(char *key);
+static uint64_t* __default_hash(int num_hashes, const char *str);
+static uint64_t __fnv_1a(const char *key);
 static void __calculate_optimal_hashes(CountingBloom *cb);
 static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk);
-static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename);
+static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, const char *filename);
 static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_t *largest_index,uint64_t *els_added, float *fullness);
 
 
@@ -61,12 +61,12 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
 }
 
 
-int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath) {
+int counting_bloom_init_on_disk(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, const char *filepath) {
     return counting_bloom_init_on_disk_alt(cb, estimated_elements, false_positive_rate, filepath, NULL);
 }
 
 
-int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, char *filepath, CountBloomHashFunction hash_function){
+int counting_bloom_init_on_disk_alt(CountingBloom *cb, uint64_t estimated_elements, float false_positive_rate, const char *filepath, CountBloomHashFunction hash_function){
     if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
         return COUNTING_BLOOM_FAILURE;
     }
@@ -112,7 +112,7 @@ int counting_bloom_destroy(CountingBloom *cb) {
     return COUNTING_BLOOM_SUCCESS;
 }
 
-int counting_bloom_add_string(CountingBloom *cb, char *str) {
+int counting_bloom_add_string(CountingBloom *cb, const char *str) {
     uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_add_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
@@ -125,13 +125,13 @@ int counting_bloom_add_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned 
         return COUNTING_BLOOM_FAILURE;
     }
     int i;
-    for (i = 0; i < cb->number_hashes; i++) {
+    for (i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] < UINT_MAX) {
-            cb->bloom[idx]++;
+            ++cb->bloom[idx];
         }
     }
-    cb->elements_added++;  // I could be convinced that if it is a duplicate than it shouldn't increment the elements added
+    ++cb->elements_added;  // I could be convinced that if it is a duplicate than it shouldn't increment the elements added
     if (cb->__is_on_disk == 1) {
         int offset = sizeof(uint64_t) + sizeof(float);
         fseek(cb->filepointer, offset * -1, SEEK_END);
@@ -140,7 +140,7 @@ int counting_bloom_add_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned 
     return COUNTING_BLOOM_SUCCESS;
 }
 
-int counting_bloom_check_string(CountingBloom *cb, char *str) {
+int counting_bloom_check_string(CountingBloom *cb, const char *str) {
     uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_check_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
@@ -154,7 +154,7 @@ int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigne
     }
     int res = COUNTING_BLOOM_SUCCESS;
     int i;
-    for (i = 0; i < cb->number_hashes; i++) {
+    for (i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] == 0) {
             res = COUNTING_BLOOM_FAILURE;
@@ -165,7 +165,7 @@ int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigne
 }
 
 // a better way would be to calculate the hashes only once...
-int counting_bloom_get_max_insertions(CountingBloom *cb, char *str) {
+int counting_bloom_get_max_insertions(CountingBloom *cb, const char *str) {
     uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
     free(hashes);
@@ -177,7 +177,7 @@ int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, u
         return 0; // this means it isn't present; fail-quick
     }
     int i, res = UINT_MAX; // set this to the max and work down
-    for (i = 0; i < cb->number_hashes; i++) {
+    for (i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] < res) {
             res = cb->bloom[idx];
@@ -186,7 +186,7 @@ int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, u
     return res;
 }
 
-int counting_bloom_remove_string(CountingBloom *cb, char *str) {
+int counting_bloom_remove_string(CountingBloom *cb, const char *str) {
     uint64_t *hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_remove_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
@@ -198,17 +198,17 @@ int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsign
         return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
     }
     int i;
-    for (i = 0; i < cb->number_hashes; i++) {
+    for (i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] != UINT_MAX) {
-            cb->bloom[idx]--;
+            --cb->bloom[idx];
         }
     }
-    cb->elements_added--; // this would need to be modified if we don't add for each
+    --cb->elements_added; // this would need to be modified if we don't add for each
     return COUNTING_BLOOM_SUCCESS;
 }
 
-uint64_t* counting_bloom_calculate_hashes(CountingBloom *cb, char *str, unsigned int number_hashes) {
+uint64_t* counting_bloom_calculate_hashes(CountingBloom *cb, const char *str, unsigned int number_hashes) {
     return cb->hash_function(number_hashes, str);
 }
 
@@ -219,7 +219,7 @@ float counting_bloom_current_false_positive_rate(CountingBloom *cb) {
     return pow((1 - e), cb->number_hashes);
 }
 
-int counting_bloom_export(CountingBloom *cb, char *filepath) {
+int counting_bloom_export(CountingBloom *cb, const char *filepath) {
     FILE *fp;
     fp = fopen(filepath, "w+b");
     if (fp == NULL) {
@@ -232,11 +232,11 @@ int counting_bloom_export(CountingBloom *cb, char *filepath) {
 }
 
 
-int counting_bloom_import(CountingBloom *cb, char *filepath) {
+int counting_bloom_import(CountingBloom *cb, const char *filepath) {
     return counting_bloom_import_alt(cb, filepath, NULL);
 }
 
-int counting_bloom_import_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function) {
+int counting_bloom_import_alt(CountingBloom *cb, const char *filepath, CountBloomHashFunction hash_function) {
     FILE *fp;
     fp = fopen(filepath, "r+b");
     if (fp == NULL) {
@@ -252,12 +252,12 @@ int counting_bloom_import_alt(CountingBloom *cb, char *filepath, CountBloomHashF
 
 
 
-int counting_bloom_import_on_disk(CountingBloom *cb, char *filepath) {
+int counting_bloom_import_on_disk(CountingBloom *cb, const char *filepath) {
     return counting_bloom_import_on_disk_alt(cb, filepath, NULL);
 }
 
 
-int counting_bloom_import_on_disk_alt(CountingBloom *cb, char *filepath, CountBloomHashFunction hash_function) {
+int counting_bloom_import_on_disk_alt(CountingBloom *cb, const char *filepath, CountBloomHashFunction hash_function) {
     cb->filepointer = fopen(filepath, "r+b");
     if (cb->filepointer == NULL) {
         fprintf(stderr, "Can't open file %s!\n", filepath);
@@ -314,29 +314,23 @@ static void __calculate_optimal_hashes(CountingBloom *cb) {
 }
 
 /* NOTE: The caller will free the results */
-static uint64_t* __default_hash(int num_hashes, char *str) {
+static uint64_t* __default_hash(int num_hashes, const char *str) {
     uint64_t *results = calloc(num_hashes, sizeof(uint64_t));
     int i;
-    char *key = calloc(17, sizeof(char));  // largest value is 7FFF,FFFF,FFFF,FFFF
-    for (i = 0; i < num_hashes; i++) {
-        if (i == 0) {
-            results[i] = __fnv_1a(str);
-        } else {
-            uint64_t prev = results[i-1];
-            memset(key, 0, 17);
-            sprintf(key, "%" PRIx64 "", prev);
-            results[i] = __fnv_1a(key);
-        }
+    char key[17] = {0};  // largest value is 7FFF,FFFF,FFFF,FFFF
+    results[0] = __fnv_1a(str);
+    for (i = 1; i < num_hashes; ++i) {
+        sprintf(key, "%" PRIx64 "", results[i-1]);
+        results[i] = __fnv_1a(key);
     }
-    free(key);
     return results;
 }
 
-static uint64_t __fnv_1a(char *key) {
+static uint64_t __fnv_1a(const char *key) {
     // FNV-1a hash (http://www.isthe.com/chongo/tech/comp/fnv/)
     int i, len = strlen(key);
     uint64_t h = 14695981039346656073ULL; // FNV_OFFSET 64 bit
-    for (i = 0; i < len; i++){
+    for (i = 0; i < len; ++i){
         h = h ^ (unsigned char) key[i];
         h = h * 1099511628211ULL; // FNV_PRIME 64 bit
     }
@@ -351,7 +345,7 @@ static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
         // will need to write out everything by hand
         uint64_t i;
         unsigned int q = 0;
-        for (i = 0; i < cb->number_bits; i++) {
+        for (i = 0; i < cb->number_bits; ++i) {
             fwrite(&q, 1, sizeof(unsigned int), fp);
         }
     }
@@ -362,7 +356,7 @@ static void __write_to_file(CountingBloom *cb, FILE *fp, short on_disk) {
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
-static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *filename) {
+static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, const char *filename) {
     int offset = sizeof(uint64_t) * 2 + sizeof(float);
     fseek(fp, offset * -1, SEEK_END);
     fread(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
@@ -395,7 +389,7 @@ static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, char *f
 
 static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_t *largest_index, uint64_t *els_added, float *fullness) {
     uint64_t i, sum = 0, lar = 0, cnt = 0, lar_idx;
-    for (i = 0; i < cb->number_bits; i++) {
+    for (i = 0; i < cb->number_bits; ++i) {
         uint64_t tmp = cb->bloom[i];
         sum += tmp;
         if (tmp > lar) {
@@ -403,7 +397,7 @@ static void __get_additional_stats(CountingBloom *cb, uint64_t *largest, uint64_
             lar_idx = i;
         }
         if (tmp > 0) {
-            cnt++;
+            ++cnt;
         }
     }
     *fullness = (cnt * 1.0) / cb->number_bits;

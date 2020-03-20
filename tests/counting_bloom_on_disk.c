@@ -14,7 +14,7 @@
 	Example of generating a custom hashing function; in this case, we want each
 	string to be added as uppercase.
 */
-uint64_t* sha256_hash(int num_hashes, char *str) {
+uint64_t* sha256_hash(int num_hashes, const char *str) {
 	// uppercase the string
 	char *tmp_str = calloc(strlen(str) + 1, sizeof(char));
 	int i = 0;
