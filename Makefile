@@ -12,4 +12,4 @@ countingbloom:
 	gcc -c $(SRCDIR)/counting_bloom.c -o $(DISTDIR)/counting_bloom.o $(CCFLAGS)
 
 clean:
-	rm -rf ./$(DISTDIR)/*
+	if [ -d "./$(DISTDIR)/" ]; then rm -rf ./$(DISTDIR)/*; fi
