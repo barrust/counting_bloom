@@ -1,15 +1,23 @@
-SRCDIR=src
+CC=gcc
+COMPFLAGS=-lm -Wall -Wpedantic -Winline -Wextra -Wno-long-long
 DISTDIR=dist
+SRCDIR=src
 TESTDIR=tests
-CCFLAGS=-lm -Wall -Wpedantic
+UNKNOWN_PRAGMAS=-Wno-unknown-pragmas
 
 all: countingbloom
-	gcc -o $(DISTDIR)/cblm $(DISTDIR)/counting_bloom.o $(TESTDIR)/counting_bloom_test.c $(CCFLAGS)
-	gcc -o $(DISTDIR)/cblmix $(DISTDIR)/counting_bloom.o $(TESTDIR)/counting_bloom_test_import_export.c $(CCFLAGS)
-	gcc -o $(DISTDIR)/cblmd $(DISTDIR)/counting_bloom.o $(TESTDIR)/counting_bloom_on_disk.c $(CCFLAGS) -lcrypto
+	$(CC) -o ./$(DISTDIR)/cblm ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_test.c $(COMPFLAGS) $(CCFLAGS)
+	$(CC) -o ./$(DISTDIR)/cblmix ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_test_import_export.c $(COMPFLAGS) $(CCFLAGS)
+	$(CC) -o ./$(DISTDIR)/cblmd ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_on_disk.c $(COMPFLAGS) $(CCFLAGS) -lcrypto
+
+debug: COMPFLAGS += -g
+debug: all
+
+release: COMPFLAGS += -O3
+release: all
 
 countingbloom:
-	gcc -c $(SRCDIR)/counting_bloom.c -o $(DISTDIR)/counting_bloom.o $(CCFLAGS)
+	$(CC) -c ./$(SRCDIR)/counting_bloom.c -o ./$(DISTDIR)/counting_bloom.o $(COMPFLAGS) $(CCFLAGS)
 
 clean:
 	if [ -f "./$(DISTDIR)/counting_bloom.o" ]; then rm -r ./$(DISTDIR)/counting_bloom.o; fi

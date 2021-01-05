@@ -1,4 +1,9 @@
+# Counting Bloom Filter
+
 ## Current Version
+* Added CPP Guards and resolved issues for C++ malloc/calloc
+* Ensure appropriate usage of `const char*`
+* Makefile improvements
 
 ### Version 1.0.1
 * Changed default hash algorithm to FNV-1a

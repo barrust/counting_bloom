@@ -16,14 +16,13 @@
 */
 uint64_t* sha256_hash(int num_hashes, const char *str) {
 	// uppercase the string
-	char *tmp_str = calloc(strlen(str) + 1, sizeof(char));
-	int i = 0;
-	for (i = 0; i < strlen(str); i++) {
+	char* tmp_str = (char*)calloc(strlen(str) + 1, sizeof(char));
+	for (unsigned int i = 0; i < strlen(str); i++) {
 		tmp_str[i] = toupper(str[i]);
 	}
-	uint64_t *results = calloc(num_hashes, sizeof(uint64_t));
+	uint64_t *results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
 	unsigned char digest[SHA256_DIGEST_LENGTH];
-	for (i = 0; i < num_hashes; i++) {
+	for (int i = 0; i < num_hashes; i++) {
 		SHA256_CTX sha256_ctx;
 		SHA256_Init(&sha256_ctx);
 		if (i == 0) {
@@ -38,7 +37,7 @@ uint64_t* sha256_hash(int num_hashes, const char *str) {
 	return results;
 }
 
-int main(int argc, char **argv) {
+int main() {
 	printf("Testing Counting Bloom version %s\n", counting_bloom_get_version());
 
 	CountingBloom cb;
