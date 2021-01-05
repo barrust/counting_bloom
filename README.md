@@ -13,6 +13,7 @@ MIT 2015
 
 ## Usage:
 ``` c
+#include <stdio.h>
 #include "counting_bloom.h"
 
 
