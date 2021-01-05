@@ -3,12 +3,13 @@ COMPFLAGS=-lm -Wall -Wpedantic -Winline -Wextra -Wno-long-long
 DISTDIR=dist
 SRCDIR=src
 TESTDIR=tests
+EXAMPLEDIR=examples
 UNKNOWN_PRAGMAS=-Wno-unknown-pragmas
 
 all: countingbloom
-	$(CC) -o ./$(DISTDIR)/cblm ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_test.c $(COMPFLAGS) $(CCFLAGS)
-	$(CC) -o ./$(DISTDIR)/cblmix ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_test_import_export.c $(COMPFLAGS) $(CCFLAGS)
-	$(CC) -o ./$(DISTDIR)/cblmd ./$(DISTDIR)/counting_bloom.o ./$(TESTDIR)/counting_bloom_on_disk.c $(COMPFLAGS) $(CCFLAGS) -lcrypto
+	$(CC) -o ./$(DISTDIR)/cblm ./$(DISTDIR)/counting_bloom.o ./$(EXAMPLEDIR)/counting_bloom_test.c $(COMPFLAGS) $(CCFLAGS)
+	$(CC) -o ./$(DISTDIR)/cblmix ./$(DISTDIR)/counting_bloom.o ./$(EXAMPLEDIR)/counting_bloom_test_import_export.c $(COMPFLAGS) $(CCFLAGS)
+	$(CC) -o ./$(DISTDIR)/cblmd ./$(DISTDIR)/counting_bloom.o ./$(EXAMPLEDIR)/counting_bloom_on_disk.c $(COMPFLAGS) $(CCFLAGS) -lcrypto
 
 debug: COMPFLAGS += -g
 debug: all
