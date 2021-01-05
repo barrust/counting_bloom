@@ -1,6 +1,6 @@
 # Counting Bloom Filter
 
-## Current Version
+## Version 1.0.2
 * Added CPP Guards and resolved issues for C++ malloc/calloc
 * Ensure appropriate usage of `const char*`
 * Makefile improvements
