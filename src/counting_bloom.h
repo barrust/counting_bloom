@@ -1,4 +1,5 @@
-
+#ifndef BARRUST_COUNTING_BLOOM_FILTER_H__
+#define BARRUST_COUNTING_BLOOM_FILTER_H__
 /*******************************************************************************
 ***
 ***	 Author: Tyler Barrus
@@ -29,9 +30,10 @@
 ***
 *******************************************************************************/
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#ifndef BARRUST_COUNTING_BLOOM_FILTER_H__
-#define BARRUST_COUNTING_BLOOM_FILTER_H__
 
 #include <inttypes.h>       /* PRIu64 */
 
@@ -140,5 +142,8 @@ float counting_bloom_current_false_positive_rate(CountingBloom *cb);
 uint64_t* counting_bloom_calculate_hashes(CountingBloom *cb, const char *key, unsigned int number_hashes);
 
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif /* END COUNTING BLOOM FILTER HEADER */

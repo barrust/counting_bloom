@@ -9,7 +9,7 @@
 #define verbose 0
 
 
-int main(int argc, char **argv) {
+int main() {
 	printf("Testing Counting Bloom version %s\n", counting_bloom_get_version());
 
 	CountingBloom cb;

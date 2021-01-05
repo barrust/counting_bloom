@@ -53,7 +53,7 @@ int counting_bloom_init_alt(CountingBloom *cb, uint64_t estimated_elements, floa
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
-    cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
+    cb->bloom = (unsigned int*)calloc(cb->number_bits, sizeof(unsigned int));
     cb->elements_added = 0;
     cb->__is_on_disk = 0;
     cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
@@ -124,8 +124,7 @@ int counting_bloom_add_string_alt(CountingBloom *cb, uint64_t* hashes, unsigned 
         printf("Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
     }
-    int i;
-    for (i = 0; i < cb->number_hashes; ++i) {
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] < UINT_MAX) {
             ++cb->bloom[idx];
@@ -153,8 +152,7 @@ int counting_bloom_check_string_alt(CountingBloom *cb, uint64_t* hashes, unsigne
         return COUNTING_BLOOM_FAILURE;
     }
     int res = COUNTING_BLOOM_SUCCESS;
-    int i;
-    for (i = 0; i < cb->number_hashes; ++i) {
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] == 0) {
             res = COUNTING_BLOOM_FAILURE;
@@ -176,8 +174,8 @@ int counting_bloom_get_max_insertions_alt(CountingBloom *cb, uint64_t* hashes, u
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return 0; // this means it isn't present; fail-quick
     }
-    int i, res = UINT_MAX; // set this to the max and work down
-    for (i = 0; i < cb->number_hashes; ++i) {
+    unsigned int res = UINT_MAX; // set this to the max and work down
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] < res) {
             res = cb->bloom[idx];
@@ -197,8 +195,7 @@ int counting_bloom_remove_string_alt(CountingBloom *cb, uint64_t* hashes, unsign
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
     }
-    int i;
-    for (i = 0; i < cb->number_hashes; ++i) {
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] != UINT_MAX) {
             --cb->bloom[idx];
@@ -272,7 +269,7 @@ int counting_bloom_import_on_disk_alt(CountingBloom *cb, const char *filepath, C
 
 
 void counting_bloom_stats(CountingBloom *cb) {
-    char *is_on_disk = (cb->__is_on_disk == 0 ? "no" : "yes");
+    const char* is_on_disk = (cb->__is_on_disk == 0 ? "no" : "yes");
     uint64_t largest, largest_index, calculated_elements;
     float fullness;
     __get_additional_stats(cb, &largest, &largest_index, &calculated_elements, &fullness);
@@ -315,7 +312,7 @@ static void __calculate_optimal_hashes(CountingBloom *cb) {
 
 /* NOTE: The caller will free the results */
 static uint64_t* __default_hash(int num_hashes, const char *str) {
-    uint64_t *results = calloc(num_hashes, sizeof(uint64_t));
+    uint64_t *results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
     int i;
     char key[17] = {0};  // largest value is 7FFF,FFFF,FFFF,FFFF
     results[0] = __fnv_1a(str);
@@ -365,7 +362,7 @@ static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, const c
     __calculate_optimal_hashes(cb);
     rewind(fp);
     if(on_disk == 0) {
-        cb->bloom = calloc(cb->number_bits, sizeof(unsigned int));
+        cb->bloom = (unsigned int*)calloc(cb->number_bits, sizeof(unsigned int));
         fread(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
     } else {  // this is for on disk implementation which isn't completed yet
         struct stat buf;
@@ -376,7 +373,7 @@ static void __read_from_file(CountingBloom *cb, FILE *fp, short on_disk, const c
         }
         fstat(fd, &buf);
         cb->__filesize = buf.st_size;
-        cb->bloom = mmap((caddr_t)0, cb->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        cb->bloom = (unsigned int*)mmap((caddr_t)0, cb->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         if (cb->bloom == (unsigned int*)-1) {
             perror("mmap: ");
             exit(1);

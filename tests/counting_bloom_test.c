@@ -8,7 +8,7 @@
 #define verbose 0
 
 
-int main(int argc, char **argv) {
+int main() {
 	printf("Testing Counting Bloom version %s\n", counting_bloom_get_version());
 
 	CountingBloom cb;
@@ -27,8 +27,7 @@ int main(int argc, char **argv) {
 	counting_bloom_add_string(&cb, "test");
 	// print out the numbers if verbose
 	if (verbose == 1) {
-		int i;
-		for (i = 0; i < cb.number_bits; i++) {
+		for (unsigned int i = 0; i < cb.number_bits; i++) {
 			printf("%d\t", cb.bloom[i]);
 		}
 		printf("\n");
