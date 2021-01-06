@@ -173,6 +173,8 @@ int counting_bloom_get_max_insertions_alt(CountingBloom* cb, uint64_t* hashes, u
     unsigned int res = UINT_MAX; // set this to the max and work down
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
+        // if (cb->bloom[idx] == 0)
+        //     return 0;  // not present, no need to continue
         if (cb->bloom[idx] < res) {
             res = cb->bloom[idx];
         }
@@ -340,7 +342,6 @@ static void __write_to_file(CountingBloom* cb, FILE* fp, short on_disk) {
     fwrite(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
     fwrite(&cb->elements_added, sizeof(uint64_t), 1, fp);
     fwrite(&cb->false_positive_probability, sizeof(float), 1, fp);
-
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
