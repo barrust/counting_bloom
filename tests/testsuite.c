@@ -445,6 +445,9 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_check_false_positive);
     MU_RUN_TEST(test_bloom_check_failure);
     MU_RUN_TEST(test_bloom_get_max_insertions);
+    // MU_RUN_TEST(test_bloom_remove);
+    // MU_RUN_TEST(test_bloom_remove_fail);
+    // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
     /* clear, reset */
@@ -463,6 +466,9 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_import_fail);
     MU_RUN_TEST(test_bloom_import_on_disk);
     MU_RUN_TEST(test_bloom_import_on_disk_fail);
+
+    /* Statistics */
+    // MU_RUN_TEST(test_bloom_filter_stat);
 }
 
 

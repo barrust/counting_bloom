@@ -66,7 +66,7 @@ typedef struct counting_bloom_filter {
     unsigned int number_hashes;
     uint64_t number_bits;
     /* bloom filter */
-    unsigned int* bloom;
+    uint32_t* bloom;
     uint64_t elements_added;
     CountBloomHashFunction hash_function;
     /* on disk handeling */

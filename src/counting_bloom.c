@@ -48,7 +48,7 @@ int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, floa
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
-    cb->bloom = (unsigned int*)calloc(cb->number_bits, sizeof(unsigned int));
+    cb->bloom = (uint32_t*)calloc(cb->number_bits, sizeof(uint32_t));
     cb->elements_added = 0;
     cb->__is_on_disk = 0;
     cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
@@ -163,7 +163,7 @@ int counting_bloom_get_max_insertions_alt(CountingBloom* cb, uint64_t* hashes, u
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return 0; // this means it isn't present; fail-quick
     }
-    unsigned int res = UINT_MAX; // set this to the max and work down
+    uint32_t res = UINT_MAX; // set this to the max and work down
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         // if (cb->bloom[idx] == 0)
@@ -318,13 +318,13 @@ static uint64_t __fnv_1a(const char* key) {
 /* NOTE: this assumes that the file handler is open and ready to use */
 static void __write_to_file(CountingBloom* cb, FILE* fp, short on_disk) {
     if (on_disk == 0) {
-        fwrite(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
+        fwrite(cb->bloom, sizeof(uint32_t), cb->number_bits, fp);
     } else {
         // will need to write out everything by hand
         uint64_t i;
-        unsigned int q = 0;
+        uint32_t q = 0;
         for (i = 0; i < cb->number_bits; ++i) {
-            fwrite(&q, 1, sizeof(unsigned int), fp);
+            fwrite(&q, 1, sizeof(uint32_t), fp);
         }
     }
     fwrite(&cb->estimated_elements, sizeof(uint64_t), 1, fp);
@@ -342,8 +342,8 @@ static void __read_from_file(CountingBloom* cb, FILE* fp, short on_disk, const c
     __calculate_optimal_hashes(cb);
     rewind(fp);
     if(on_disk == 0) {
-        cb->bloom = (unsigned int*)calloc(cb->number_bits, sizeof(unsigned int));
-        fread(cb->bloom, sizeof(unsigned int), cb->number_bits, fp);
+        cb->bloom = (uint32_t*)calloc(cb->number_bits, sizeof(uint32_t));
+        fread(cb->bloom, sizeof(uint32_t), cb->number_bits, fp);
     } else {  // this is for on disk implementation which isn't completed yet
         struct stat buf;
         int fd = open(filename, O_RDWR);
@@ -353,8 +353,8 @@ static void __read_from_file(CountingBloom* cb, FILE* fp, short on_disk, const c
         }
         fstat(fd, &buf);
         cb->__filesize = buf.st_size;
-        cb->bloom = (unsigned int*)mmap((caddr_t)0, cb->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-        if (cb->bloom == (unsigned int*)-1) {
+        cb->bloom = (uint32_t*)mmap((caddr_t)0, cb->__filesize, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (cb->bloom == (uint32_t*)-1) {
             perror("mmap: ");
             exit(1);
         }
