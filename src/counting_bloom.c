@@ -43,7 +43,7 @@ int counting_bloom_init(CountingBloom* cb, uint64_t estimated_elements, float fa
 }
 
 int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function) {
-    if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
+    if(estimated_elements == 0 || estimated_elements > UINT64_MAX) {
         return COUNTING_BLOOM_FAILURE;
     }
     if (false_positive_rate <= 0.0 || false_positive_rate >= 1.0 ) {
@@ -64,7 +64,7 @@ int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t estimated_elements, 
 }
 
 int counting_bloom_init_on_disk_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath, CountBloomHashFunction hash_function){
-    if(estimated_elements <= 0 || estimated_elements > UINT64_MAX) {
+    if(estimated_elements == 0 || estimated_elements > UINT64_MAX) {
         return COUNTING_BLOOM_FAILURE;
     }
     if (false_positive_rate <= 0.0 || false_positive_rate >= 1.0 ) {
@@ -206,8 +206,8 @@ uint64_t* counting_bloom_calculate_hashes(CountingBloom* cb, const char* str, un
 }
 
 float counting_bloom_current_false_positive_rate(CountingBloom* cb) {
-    int num = (cb->number_hashes * -1 * cb->elements_added);
-    double d = (num * 1.0) / (cb->number_bits * 1.0);
+    int num = cb->number_hashes * cb->elements_added;
+    double d = -num / (float) cb->number_bits;
     double e = exp(d);
     return pow((1 - e), cb->number_hashes);
 }
