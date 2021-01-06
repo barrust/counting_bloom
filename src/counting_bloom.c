@@ -117,7 +117,7 @@ int counting_bloom_add_string(CountingBloom* cb, const char* str) {
 
 int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
     if (number_hashes_passed < cb->number_hashes) {
-        printf("Error: Not enough hashes were passed!\n");
+        fprintf(stderr, "Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
     }
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
@@ -144,7 +144,7 @@ int counting_bloom_check_string(CountingBloom* cb, const char* str) {
 
 int counting_bloom_check_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
     if (number_hashes_passed < cb->number_hashes) {
-        printf("Error: Not enough hashes were passed!\n");
+        fprintf(stderr, "Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
     }
     int res = COUNTING_BLOOM_SUCCESS;

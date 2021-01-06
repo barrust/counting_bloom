@@ -71,6 +71,104 @@ MU_TEST(test_bloom_on_disk_setup_returns) {
     remove(filepath);
 }
 
+/*******************************************************************************
+*   Test set and check
+*******************************************************************************/
+MU_TEST(test_bloom_set) {
+    int errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(3000, cb.elements_added);
+
+    errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+}
+
+MU_TEST(test_bloom_set_failure) {
+    uint64_t* hashes = counting_bloom_calculate_hashes(&cb, "three", 3); // we want too few!
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_add_string_alt(&cb, hashes, 3));
+    free(hashes);
+}
+
+MU_TEST(test_bloom_set_on_disk) {
+    /*  set on disk is different than in memory because some values have to be
+        updated on disk; so this must be tested seperately */
+    char filepath[] = "./dist/test_bloom_set_on_disk.blm";
+
+    CountingBloom bf;
+    counting_bloom_init_on_disk(&bf, 50000, 0.01, filepath);
+
+    int errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(3000, bf.elements_added);
+
+    errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    counting_bloom_destroy(&bf);
+    remove(filepath);
+}
+
+MU_TEST(test_bloom_check) {
+    int errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+
+    /* check things that are not present */
+    errors = 0;
+    for (int i = 3000; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_FAILURE ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+}
+
+MU_TEST(test_bloom_check_false_positive) {
+    int errors = 0;
+    for (int i = 0; i < 50000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+
+    /* check things that are not present */
+    errors = 0;
+    for (int i = 50000; i < 51000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_FAILURE ? 0 : 1;
+    }
+    mu_assert_int_eq(11, errors);  // there are 11 false positives!
+}
+
+MU_TEST(test_bloom_check_failure) {
+    uint64_t* hashes = counting_bloom_calculate_hashes(&cb, "three", 3); // we want too few!
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_check_string_alt(&cb, hashes, 3));
+    free(hashes);
+}
+
 
 /*******************************************************************************
 *   Testsuite
@@ -83,6 +181,14 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_setup_returns);
     MU_RUN_TEST(test_bloom_on_disk_setup);
     MU_RUN_TEST(test_bloom_on_disk_setup_returns);
+
+    /* set and contains */
+    MU_RUN_TEST(test_bloom_set);
+    MU_RUN_TEST(test_bloom_set_failure);
+    MU_RUN_TEST(test_bloom_set_on_disk);
+    MU_RUN_TEST(test_bloom_check);
+    MU_RUN_TEST(test_bloom_check_false_positive);
+    MU_RUN_TEST(test_bloom_check_failure);
 }
 
 
