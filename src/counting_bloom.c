@@ -38,10 +38,6 @@ static void __get_additional_stats(CountingBloom* cb, uint64_t* largest, uint64_
 /*******************************************************************************
 ***		PUBLIC FUNCTION DECLARATIONS
 *******************************************************************************/
-int counting_bloom_init(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate) {
-    return counting_bloom_init_alt(cb, estimated_elements, false_positive_rate, NULL);
-}
-
 int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function) {
     if(estimated_elements == 0 || estimated_elements > UINT64_MAX) {
         return COUNTING_BLOOM_FAILURE;
@@ -59,9 +55,6 @@ int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, floa
     return COUNTING_BLOOM_SUCCESS;
 }
 
-int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath) {
-    return counting_bloom_init_on_disk_alt(cb, estimated_elements, false_positive_rate, filepath, NULL);
-}
 
 int counting_bloom_init_on_disk_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath, CountBloomHashFunction hash_function){
     if(estimated_elements == 0 || estimated_elements > UINT64_MAX) {
@@ -215,6 +208,9 @@ float counting_bloom_current_false_positive_rate(CountingBloom* cb) {
 }
 
 int counting_bloom_export(CountingBloom* cb, const char* filepath) {
+    if (cb->__is_on_disk == 1) {
+        return COUNTING_BLOOM_SUCCESS;
+    }
     FILE* fp;
     fp = fopen(filepath, "w+b");
     if (fp == NULL) {
@@ -224,10 +220,6 @@ int counting_bloom_export(CountingBloom* cb, const char* filepath) {
     __write_to_file(cb, fp, 0);
     fclose(fp);
     return COUNTING_BLOOM_SUCCESS;
-}
-
-int counting_bloom_import(CountingBloom* cb, const char* filepath) {
-    return counting_bloom_import_alt(cb, filepath, NULL);
 }
 
 int counting_bloom_import_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function) {
@@ -242,10 +234,6 @@ int counting_bloom_import_alt(CountingBloom* cb, const char* filepath, CountBloo
     cb->__is_on_disk = 0;  // not on disk
     cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
     return COUNTING_BLOOM_SUCCESS;
-}
-
-int counting_bloom_import_on_disk(CountingBloom* cb, const char* filepath) {
-    return counting_bloom_import_on_disk_alt(cb, filepath, NULL);
 }
 
 int counting_bloom_import_on_disk_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function) {

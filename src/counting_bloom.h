@@ -37,6 +37,11 @@ extern "C" {
 
 #include <inttypes.h>       /* PRIu64 */
 
+/* https://gcc.gnu.org/onlinedocs/gcc/Alternate-Keywords.html#Alternate-Keywords */
+#ifndef __GNUC__
+#define __inline__ inline
+#endif
+
 
 #ifdef __APPLE__
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -77,12 +82,16 @@ typedef struct counting_bloom_filter {
     Estimated elements is 0 < x <= UINT64_MAX.
     False positive rate is 0.0 < x < 1.0
 */
-int counting_bloom_init(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate);
 int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function);
+static __inline__ int counting_bloom_init(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate) {
+    return counting_bloom_init_alt(cb, estimated_elements, false_positive_rate, NULL);
+}
 
 /* Initialize a counting bloom directly into file; useful if the counting bloom is larger than available RAM */
-int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath);
 int counting_bloom_init_on_disk_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath, CountBloomHashFunction hash_function);
+static __inline__ int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, const char* filepath) {
+    return counting_bloom_init_on_disk_alt(cb, estimated_elements, false_positive_rate, filepath, NULL);
+}
 
 /* Print out statistics about the counting bloom filter */
 void counting_bloom_stats(CountingBloom* cb);
@@ -118,16 +127,20 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsign
 int counting_bloom_export(CountingBloom* cb, const char* filepath);
 
 /* Import a previously exported counting bloom from a file into memory */
-int counting_bloom_import(CountingBloom* cb, const char* filepath);
 int counting_bloom_import_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function);
+static __inline__ int counting_bloom_import(CountingBloom* cb, const char* filepath) {
+    return counting_bloom_import_alt(cb, filepath, NULL);
+}
 
 /*
     Import a previously exported counting bloom from a file but do not pull the full bloom into memory.
     This is allows for the speed / storage trade off of not needing to put the full counting bloom
     into RAM.
 */
-int counting_bloom_import_on_disk(CountingBloom* cb, const char* filepath);
 int counting_bloom_import_on_disk_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function);
+static __inline__ int counting_bloom_import_on_disk(CountingBloom* cb, const char* filepath) {
+    return counting_bloom_import_on_disk_alt(cb, filepath, NULL);
+}
 
 /* Calculates the current false positive rate based on the number of inserted elements */
 float counting_bloom_current_false_positive_rate(CountingBloom* cb);

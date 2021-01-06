@@ -1,8 +1,15 @@
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include <openssl/md5.h>
 
 #include "minunit.h"
 #include "../src/counting_bloom.h"
 
+
+static int calculate_md5sum(const char* filename, char* digest);
+static off_t fsize(const char* filename);
 
 CountingBloom cb;
 
@@ -244,14 +251,14 @@ MU_TEST(test_bloom_current_false_positive_rate) {
 // MU_TEST(test_bloom_count_set_bits) {
 //     mu_assert_int_eq(0, bloom_filter_count_set_bits(&b));
 //
-//     bloom_filter_add_string(&b, "a");
+//     counting_bloom_add_string(&cb, "a");
 //     mu_assert_int_eq(b.number_hashes, bloom_filter_count_set_bits(&b));
 //
 //     /* add a few keys */
 //     for (int i = 0; i < 5000; ++i) {
 //         char key[10] = {0};
 //         sprintf(key, "%d", i);
-//         bloom_filter_add_string(&b, key);
+//         counting_bloom_add_string(&cb, key);
 //     }
 //     mu_assert_int_eq(33592, bloom_filter_count_set_bits(&b));
 // }
@@ -300,6 +307,125 @@ MU_TEST(test_bloom_current_false_positive_rate) {
 // }
 
 /*******************************************************************************
+*   Test Import / Export
+*******************************************************************************/
+MU_TEST(test_bloom_export) {
+    char filepath[] = "./dist/test_bloom_export.blm";
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_export(&cb, filepath));
+
+    char digest[33] = {0};
+    calculate_md5sum(filepath, digest);
+    mu_assert_string_eq("6e434129d9d0238bbb650ff800abfac3", digest);
+    mu_assert_int_eq(1917032, fsize(filepath));
+    remove(filepath);
+}
+
+MU_TEST(test_bloom_export_on_disk) {
+    // exporting on disk just closes the file!
+    char filepath[] = "./dist/test_bloom_export_on_disk.blm";
+
+    CountingBloom bf;
+    counting_bloom_init_on_disk(&bf, 50000, 0.01, filepath);
+
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&bf, key);
+    }
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_export(&bf, filepath));
+
+    counting_bloom_destroy(&bf);
+
+    char digest[33] = {0};
+    calculate_md5sum(filepath, digest);
+    mu_assert_string_eq("6e434129d9d0238bbb650ff800abfac3", digest);
+    mu_assert_int_eq(1917032, fsize(filepath));
+    remove(filepath);
+}
+
+MU_TEST(test_bloom_import) {
+    char filepath[] = "./dist/test_bloom_import.blm";
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_export(&cb, filepath));
+
+    // now load the file back in!
+    CountingBloom bf;
+    counting_bloom_import(&bf, filepath);
+
+    mu_assert_int_eq(50000, bf.estimated_elements);
+    float fpr = 0.01;
+    mu_assert_double_eq(fpr, bf.false_positive_probability);
+    mu_assert_int_eq(7, bf.number_hashes);
+    mu_assert_int_eq(479253, bf.number_bits);
+    mu_assert_int_eq(5000, bf.elements_added);
+    int errors = 0;
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    counting_bloom_destroy(&bf);
+    remove(filepath);
+}
+
+/* NOTE: apparently import does not check all possible failures! */
+MU_TEST(test_bloom_import_fail) {
+    char filepath[] = "./dist/test_bloom_import_fail.blm";
+    CountingBloom bf;
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_import(&bf, filepath));
+}
+
+MU_TEST(test_bloom_import_on_disk) {
+    char filepath[] = "./dist/test_bloom_import.blm";
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_export(&cb, filepath));
+
+    // now load the file back in!
+    CountingBloom bf;
+    counting_bloom_import_on_disk(&bf, filepath);
+
+    mu_assert_int_eq(50000, bf.estimated_elements);
+    float fpr = 0.01;
+    mu_assert_double_eq(fpr, bf.false_positive_probability);
+    mu_assert_int_eq(7, bf.number_hashes);
+    mu_assert_int_eq(479253, bf.number_bits);  // same as bloom_length
+    mu_assert_int_eq(5000, bf.elements_added);
+    int errors = 0;
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    counting_bloom_destroy(&bf);
+    remove(filepath);
+}
+
+MU_TEST(test_bloom_import_on_disk_fail) {
+    char filepath[] = "./dist/test_bloom_import_on_disk_fail.blm";
+    CountingBloom bf;
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_import_on_disk(&bf, filepath));
+}
+
+/*******************************************************************************
 *   Testsuite
 *******************************************************************************/
 MU_TEST_SUITE(test_suite) {
@@ -320,6 +446,7 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_check_failure);
     MU_RUN_TEST(test_bloom_get_max_insertions);
 
+
     /* clear, reset */
     // MU_RUN_TEST(test_bloom_clear);
 
@@ -328,6 +455,14 @@ MU_TEST_SUITE(test_suite) {
     // MU_RUN_TEST(test_bloom_count_set_bits);
     // MU_RUN_TEST(test_bloom_export_size);
     // MU_RUN_TEST(test_bloom_estimate_elements);
+
+    /* export, import */
+    MU_RUN_TEST(test_bloom_export);
+    MU_RUN_TEST(test_bloom_export_on_disk);
+    MU_RUN_TEST(test_bloom_import);
+    MU_RUN_TEST(test_bloom_import_fail);
+    MU_RUN_TEST(test_bloom_import_on_disk);
+    MU_RUN_TEST(test_bloom_import_on_disk_fail);
 }
 
 
@@ -339,4 +474,51 @@ int main() {
     MU_REPORT();
     printf("Number failed tests: %d\n", minunit_fail);
     return minunit_fail;
+}
+
+
+
+
+static int calculate_md5sum(const char* filename, char* digest) {
+    FILE *file_ptr;
+    file_ptr = fopen(filename, "r");
+    if (file_ptr == NULL) {
+        perror("Error opening file");
+        fflush(stdout);
+        return 1;
+    }
+
+    int n;
+    MD5_CTX c;
+    char buf[512];
+    ssize_t bytes;
+    unsigned char out[MD5_DIGEST_LENGTH];
+
+    MD5_Init(&c);
+    do {
+        bytes = fread(buf, 1, 512, file_ptr);
+        MD5_Update(&c, buf, bytes);
+    } while(bytes > 0);
+
+    MD5_Final(out, &c);
+
+    for (n = 0; n < MD5_DIGEST_LENGTH; n++) {
+        char hex[3] = {0};
+        sprintf(hex, "%02x", out[n]);
+        digest[n*2] = hex[0];
+        digest[n*2+1] = hex[1];
+    }
+
+    fclose(file_ptr);
+
+    return 0;
+}
+
+static off_t fsize(const char* filename) {
+    struct stat st;
+
+    if (stat(filename, &st) == 0)
+        return st.st_size;
+
+    return -1;
 }
