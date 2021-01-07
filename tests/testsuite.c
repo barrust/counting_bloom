@@ -201,6 +201,88 @@ MU_TEST(test_bloom_get_max_insertions) {
     mu_assert_int_eq(0, errors);
 }
 
+MU_TEST(test_bloom_get_max_insertions_missing) {
+    int errors = 0;
+    for (int i = 0; i < 1500; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(3000, cb.elements_added);
+
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+
+        int res = counting_bloom_get_max_insertions(&cb, key);
+
+        if (i < 1500) {
+            errors += res == 2 ? 0 : 1;  // check we got the insertion
+        } else {
+            errors += res == 0 ? 0 : 1;  // check we got nothing returned
+        }
+    }
+
+    mu_assert_int_eq(0, errors);
+}
+
+MU_TEST(test_bloom_remove) {
+    int errors = 0;
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+        if (i % 2 == 0)
+            errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(4500, cb.elements_added);
+
+    errors = 0;
+    for (int i = 0; i < 1500; i+=2) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        int res = counting_bloom_get_max_insertions(&cb, key);
+        errors += res == 2 ? 0 : 1;  // should be there twice!
+
+        res = counting_bloom_remove_string(&cb, key);
+        errors += res == COUNTING_BLOOM_SUCCESS ? 0 : 1;  // check we got success
+
+        res = counting_bloom_get_max_insertions(&cb, key);
+        errors += res == 1 ? 0 : 1;  // should be there once!
+    }
+    mu_assert_int_eq(0, errors);
+}
+
+MU_TEST(test_bloom_remove_fail) {
+    int errors = 0;
+    for (int i = 0; i < 1500; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(1500, cb.elements_added);
+
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+
+        int res = counting_bloom_remove_string(&cb, key);
+
+        if (i < 1500) {
+            errors += res == COUNTING_BLOOM_SUCCESS ? 0 : 1;  // check we got success
+        } else {
+            errors += res == COUNTING_BLOOM_FAILURE ? 0 : 1;  // check we got success
+        }
+    }
+
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(0, cb.elements_added);
+}
+
 /*******************************************************************************
 *   Test clear/reset
 *******************************************************************************/
@@ -426,6 +508,51 @@ MU_TEST(test_bloom_import_on_disk_fail) {
 }
 
 /*******************************************************************************
+*   Test Statistics
+*******************************************************************************/
+MU_TEST(test_bloom_filter_stat) {
+    for (int i = 0; i < 400; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+
+    /* save the printout to a buffer */
+    int stdout_save;
+    char buffer[2046] = {0};
+    fflush(stdout); //clean everything first
+    stdout_save = dup(STDOUT_FILENO); //save the stdout state
+    freopen("output_file", "a", stdout); //redirect stdout to null pointer
+    setvbuf(stdout, buffer, _IOFBF, 1024); //set buffer to stdout
+
+    counting_bloom_stats(&cb);
+
+    /* reset stdout */
+    freopen("output_file", "a", stdout); //redirect stdout to null again
+    dup2(stdout_save, STDOUT_FILENO); //restore the previous state of stdout
+    setvbuf(stdout, NULL, _IONBF, 0); //disable buffer to print to screen instantly
+
+    // Not sure this is necessary, but it cleans it up
+    remove("output_file");
+
+    mu_assert_not_null(buffer);
+    mu_assert_string_eq("CountingBloom\n\
+    bits: 479253\n\
+    estimated elements: 50000\n\
+    number hashes: 7\n\
+    max false positive rate: 0.010000\n\
+    elements added: 400\n\
+    current false positive rate: 0.000000\n\
+    is on disk: no\n\
+    index fullness: 0.005822\n\
+    max index usage: 2\n\
+    max index id: 7890\n\
+    calculated elements: 400\n", buffer);
+}
+
+
+
+/*******************************************************************************
 *   Testsuite
 *******************************************************************************/
 MU_TEST_SUITE(test_suite) {
@@ -445,8 +572,9 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_check_false_positive);
     MU_RUN_TEST(test_bloom_check_failure);
     MU_RUN_TEST(test_bloom_get_max_insertions);
-    // MU_RUN_TEST(test_bloom_remove);
-    // MU_RUN_TEST(test_bloom_remove_fail);
+    MU_RUN_TEST(test_bloom_get_max_insertions_missing);
+    MU_RUN_TEST(test_bloom_remove);
+    MU_RUN_TEST(test_bloom_remove_fail);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
@@ -468,7 +596,7 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_import_on_disk_fail);
 
     /* Statistics */
-    // MU_RUN_TEST(test_bloom_filter_stat);
+    MU_RUN_TEST(test_bloom_filter_stat);
 }
 
 

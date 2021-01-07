@@ -192,7 +192,7 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsign
             --cb->bloom[idx];
         }
     }
-    --cb->elements_added; // this would need to be modified if we don't add for each
+    --cb->elements_added;
     return COUNTING_BLOOM_SUCCESS;
 }
 
