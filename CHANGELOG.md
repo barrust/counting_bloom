@@ -1,5 +1,11 @@
 # Counting Bloom Filter
 
+## Version 1.0.3
+* Full test suite
+* Ensure bloom size to be `uint32_t` instead of `unsigned int`
+* Added `counting_bloom_export_size()`
+* Added `counting_bloom_clear()`
+
 ## Version 1.0.2
 * Added CPP Guards and resolved issues for C++ malloc/calloc
 * Ensure appropriate usage of `const char*`

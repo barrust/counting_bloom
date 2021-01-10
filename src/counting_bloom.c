@@ -3,7 +3,7 @@
 ***	 Author: Tyler Barrus
 ***	 email:  barrust@gmail.com
 ***
-***	 Version: 1.0.2
+***	 Version: 1.0.3
 ***
 ***	 License: MIT 2015
 ***
@@ -12,7 +12,7 @@
 #include <stdlib.h>         /* calloc, malloc */
 #include <stdio.h>          /* printf */
 #include <string.h>         /* strlen */
-#include <limits.h>         /* UINT_MAX */
+#include <stdint.h>         /* UINT32_MAX */
 #include <fcntl.h>          /* open, O_RDWR */
 #include <unistd.h>         /* for close */
 #include <sys/types.h>      /* */
@@ -125,7 +125,7 @@ int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned 
     }
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
-        if (cb->bloom[idx] < UINT_MAX) {
+        if (cb->bloom[idx] < UINT32_MAX) {
             ++cb->bloom[idx];
         }
     }
@@ -169,7 +169,7 @@ int counting_bloom_get_max_insertions_alt(CountingBloom* cb, uint64_t* hashes, u
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return 0; // this means it isn't present; fail-quick
     }
-    uint32_t res = UINT_MAX; // set this to the max and work down
+    uint32_t res = UINT32_MAX; // set this to the max and work down
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         // if (cb->bloom[idx] == 0)
@@ -194,7 +194,7 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsign
     }
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
-        if (cb->bloom[idx] != UINT_MAX) {
+        if (cb->bloom[idx] != UINT32_MAX) {
             --cb->bloom[idx];
         }
     }
