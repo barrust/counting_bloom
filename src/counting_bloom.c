@@ -33,6 +33,7 @@ static void __calculate_optimal_hashes(CountingBloom* cb);
 static void __write_to_file(CountingBloom* cb, FILE* fp, short on_disk);
 static void __read_from_file(CountingBloom* cb, FILE* fp, short on_disk, const char* filename);
 static void __get_additional_stats(CountingBloom* cb, uint64_t* largest, uint64_t* largest_index,uint64_t* els_added, float *fullness);
+static void __update_elements_added_on_disk(CountingBloom* cb);
 
 
 /*******************************************************************************
@@ -101,6 +102,15 @@ int counting_bloom_destroy(CountingBloom* cb) {
     return COUNTING_BLOOM_SUCCESS;
 }
 
+int counting_bloom_clear(CountingBloom* cb) {
+    for (unsigned int i = 0; i < cb->number_bits; ++i) {
+        cb->bloom[i] = 0;
+    }
+    cb->elements_added = 0;
+    __update_elements_added_on_disk(cb);
+    return COUNTING_BLOOM_SUCCESS;
+}
+
 int counting_bloom_add_string(CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_add_string_alt(cb, hashes, cb->number_hashes);
@@ -120,11 +130,7 @@ int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned 
         }
     }
     ++cb->elements_added;  // I could be convinced that if it is a duplicate than it shouldn't increment the elements added
-    if (cb->__is_on_disk == 1) {
-        int offset = sizeof(uint64_t) + sizeof(float);
-        fseek(cb->filepointer, offset * -1, SEEK_END);
-        fwrite(&cb->elements_added, 1, sizeof(uint64_t), cb->filepointer);
-    }
+    __update_elements_added_on_disk(cb);
     return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -193,6 +199,7 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsign
         }
     }
     --cb->elements_added;
+    __update_elements_added_on_disk(cb);
     return COUNTING_BLOOM_SUCCESS;
 }
 
@@ -274,6 +281,18 @@ void counting_bloom_stats(CountingBloom* cb) {
     cb->false_positive_probability, cb->elements_added,
     counting_bloom_current_false_positive_rate(cb), is_on_disk,
     fullness, largest, largest_index, calculated_elements);
+}
+
+uint64_t counting_bloom_count_set_bits(CountingBloom* cb) {
+    uint64_t res = 0;
+    for (uint64_t i = 0; i < cb->number_bits; ++i) {
+        res += cb->bloom[i] > 0 ? 1 : 0;
+    }
+    return res;
+}
+
+uint64_t counting_bloom_export_size(CountingBloom* cb) {
+    return (uint64_t)((cb->number_bits * sizeof(uint32_t)) + (2 * sizeof(uint32_t)) + sizeof(float));
 }
 
 
@@ -380,4 +399,12 @@ static void __get_additional_stats(CountingBloom* cb, uint64_t* largest, uint64_
     *els_added = (sum) / cb->number_hashes;
     *largest = lar;
     *largest_index = lar_idx;
+}
+
+static void __update_elements_added_on_disk(CountingBloom* cb) {
+    if (cb->__is_on_disk == 1) {
+        int offset = sizeof(uint64_t) + sizeof(float);
+        fseek(cb->filepointer, offset * -1, SEEK_END);
+        fwrite(&cb->elements_added, 1, sizeof(uint64_t), cb->filepointer);
+    }
 }

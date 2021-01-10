@@ -99,6 +99,9 @@ void counting_bloom_stats(CountingBloom* cb);
 /* Release all memory allocated for the counting bloom */
 int counting_bloom_destroy(CountingBloom* cb);
 
+/* reset filter to unused state */
+int counting_bloom_clear(CountingBloom* cb);
+
 /*  Add a string (or element) to the counting bloom filter */
 int counting_bloom_add_string(CountingBloom* cb, const char* key);
 
@@ -153,6 +156,12 @@ float counting_bloom_current_false_positive_rate(CountingBloom* cb);
     NOTE: It is up to the caller to free the allocated memory
 */
 uint64_t* counting_bloom_calculate_hashes(CountingBloom* cb, const char* key, unsigned int number_hashes);
+
+/* Count the number of bits set to 1 (i.e., greater than 0) */
+uint64_t counting_bloom_count_set_bits(CountingBloom* cb);
+
+/* Calculate the size the bloom filter will take on disk when exported in bytes */
+uint64_t counting_bloom_export_size(CountingBloom* cb);
 
 
 #ifdef __cplusplus

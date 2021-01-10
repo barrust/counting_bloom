@@ -131,6 +131,11 @@ MU_TEST(test_bloom_set_on_disk) {
     }
     mu_assert_int_eq(0, errors);
     counting_bloom_destroy(&bf);
+
+    // make sure elements added is correct!
+    counting_bloom_import(&bf, filepath);
+    mu_assert_int_eq(3000, bf.elements_added);
+    counting_bloom_destroy(&bf);
     remove(filepath);
 }
 
@@ -283,29 +288,104 @@ MU_TEST(test_bloom_remove_fail) {
     mu_assert_int_eq(0, cb.elements_added);
 }
 
+MU_TEST(test_bloom_remove_on_disk_with_failures) {
+    /*  set on disk is different than in memory because some values have to be
+        updated on disk; so this must be tested seperately */
+    char filepath[] = "./dist/test_bloom_set_on_disk.blm";
+    int errors = 0;
+    CountingBloom bf;
+    counting_bloom_init_on_disk(&bf, 50000, 0.01, filepath);
+
+    for (int i = 0; i < 1500; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_add_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(1500, bf.elements_added);
+
+    for (int i = 0; i < 3000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+
+        int res = counting_bloom_remove_string(&bf, key);
+
+        if (i < 1500) {
+            errors += res == COUNTING_BLOOM_SUCCESS ? 0 : 1;  // check we got success
+        } else {
+            errors += res == COUNTING_BLOOM_FAILURE ? 0 : 1;  // check we got success
+        }
+    }
+
+    mu_assert_int_eq(0, errors);
+    mu_assert_int_eq(0, bf.elements_added);
+
+    counting_bloom_destroy(&bf);
+
+    // re-import the counting bloom filter to see if elements added was correctly set!
+    counting_bloom_import(&bf, filepath);
+    mu_assert_int_eq(0, bf.elements_added);
+    counting_bloom_destroy(&bf);
+
+    remove(filepath);
+}
+
 /*******************************************************************************
 *   Test clear/reset
 *******************************************************************************/
-// MU_TEST(test_bloom_clear) {
-//     for (int i = 0; i < 5000; ++i) {
-//         char key[10] = {0};
-//         sprintf(key, "%d", i);
-//         counting_bloom_add_string(&cb, key);
-//     }
-//     mu_assert_int_eq(5000, cb.elements_added);
-//
-//     mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_clear(&b));
-//
-//     mu_assert_int_eq(0, b.elements_added);
-//
-//     int errors = 0;
-//     for (int i = 0; i < 5000; ++i) {
-//         char key[10] = {0};
-//         sprintf(key, "%d", i);
-//         errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
-//     }
-//     mu_assert_int_eq(5000, errors);
-// }
+MU_TEST(test_bloom_clear) {
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+    mu_assert_int_eq(5000, cb.elements_added);
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_clear(&cb));
+
+    mu_assert_int_eq(0, cb.elements_added);
+
+    int errors = 0;
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(5000, errors);
+}
+
+MU_TEST(test_bloom_clear_on_disk) {
+    char filepath[] = "./dist/test_bloom_set_on_disk.blm";
+    CountingBloom bf;
+    counting_bloom_init_on_disk(&bf, 50000, 0.01, filepath);
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&bf, key);
+    }
+    mu_assert_int_eq(5000, bf.elements_added);
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_clear(&bf));
+
+    mu_assert_int_eq(0, bf.elements_added);
+
+    int errors = 0;
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        errors += counting_bloom_check_string(&bf, key) == COUNTING_BLOOM_SUCCESS ? 0 : 1;
+    }
+    mu_assert_int_eq(5000, errors);
+
+    counting_bloom_destroy(&bf);
+
+    // re-import the counting bloom filter to see if elements added was correctly set!
+    counting_bloom_import(&bf, filepath);
+    mu_assert_int_eq(0, bf.elements_added);
+    counting_bloom_destroy(&bf);
+
+    remove(filepath);
+}
 
 /*******************************************************************************
 *   Test statistics
@@ -330,45 +410,45 @@ MU_TEST(test_bloom_current_false_positive_rate) {
     mu_assert_double_between(0.00990, 0.01010, counting_bloom_current_false_positive_rate(&cb));
 }
 
-// MU_TEST(test_bloom_count_set_bits) {
-//     mu_assert_int_eq(0, bloom_filter_count_set_bits(&b));
-//
-//     counting_bloom_add_string(&cb, "a");
-//     mu_assert_int_eq(b.number_hashes, bloom_filter_count_set_bits(&b));
-//
-//     /* add a few keys */
-//     for (int i = 0; i < 5000; ++i) {
-//         char key[10] = {0};
-//         sprintf(key, "%d", i);
-//         counting_bloom_add_string(&cb, key);
-//     }
-//     mu_assert_int_eq(33592, bloom_filter_count_set_bits(&b));
-// }
+MU_TEST(test_bloom_count_set_bits) {
+    mu_assert_int_eq(0, counting_bloom_count_set_bits(&cb));
 
-// MU_TEST(test_bloom_export_size) {  // size is in bytes
-//     mu_assert_int_eq(59927, counting_bloom_export_size(&cb));
-//
-//     CountingBloom bf;
-//     counting_bloom_init(&bf, 100000, .5);
-//     mu_assert_int_eq(18054, counting_bloom_export_size(&bf));
-//     counting_bloom_destroy(&bf);
-//
-//     counting_bloom_init(&bf, 100000, .1);
-//     mu_assert_int_eq(59927, counting_bloom_export_size(&bf));
-//     counting_bloom_destroy(&bf);
-//
-//     counting_bloom_init(&bf, 100000, .05);
-//     mu_assert_int_eq(77961, counting_bloom_export_size(&bf));
-//     counting_bloom_destroy(&bf);
-//
-//     counting_bloom_init(&bf, 100000, .01);
-//     mu_assert_int_eq(119834, counting_bloom_export_size(&bf));
-//     counting_bloom_destroy(&bf);
-//
-//     counting_bloom_init(&bf, 100000, .001);
-//     mu_assert_int_eq(179740, counting_bloom_export_size(&bf));
-//     counting_bloom_destroy(&bf);
-// }
+    counting_bloom_add_string(&cb, "a");
+    mu_assert_int_eq(cb.number_hashes, counting_bloom_count_set_bits(&cb));
+
+    /* add a few keys */
+    for (int i = 0; i < 5000; ++i) {
+        char key[10] = {0};
+        sprintf(key, "%d", i);
+        counting_bloom_add_string(&cb, key);
+    }
+    mu_assert_int_eq(33592, counting_bloom_count_set_bits(&cb));
+}
+
+MU_TEST(test_bloom_export_size) {  // size is in bytes
+    mu_assert_int_eq(1917024, counting_bloom_export_size(&cb));
+
+    CountingBloom bf;
+    counting_bloom_init(&bf, 100000, .5);
+    mu_assert_int_eq(577092, counting_bloom_export_size(&bf));
+    counting_bloom_destroy(&bf);
+
+    counting_bloom_init(&bf, 100000, .1);
+    mu_assert_int_eq(1917024, counting_bloom_export_size(&bf));
+    counting_bloom_destroy(&bf);
+
+    counting_bloom_init(&bf, 100000, .05);
+    mu_assert_int_eq(2494104, counting_bloom_export_size(&bf));
+    counting_bloom_destroy(&bf);
+
+    counting_bloom_init(&bf, 100000, .01);
+    mu_assert_int_eq(3834036, counting_bloom_export_size(&bf));
+    counting_bloom_destroy(&bf);
+
+    counting_bloom_init(&bf, 100000, .001);
+    mu_assert_int_eq(5751048, counting_bloom_export_size(&bf));
+    counting_bloom_destroy(&bf);
+}
 
 // MU_TEST(test_bloom_estimate_elements) {
 //     for (int i = 0; i < 5000; ++i) {
@@ -575,16 +655,18 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_get_max_insertions_missing);
     MU_RUN_TEST(test_bloom_remove);
     MU_RUN_TEST(test_bloom_remove_fail);
+    MU_RUN_TEST(test_bloom_remove_on_disk_with_failures);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
     /* clear, reset */
-    // MU_RUN_TEST(test_bloom_clear);
+    MU_RUN_TEST(test_bloom_clear);
+    MU_RUN_TEST(test_bloom_clear_on_disk);
 
     /* statistics */
     MU_RUN_TEST(test_bloom_current_false_positive_rate);
-    // MU_RUN_TEST(test_bloom_count_set_bits);
-    // MU_RUN_TEST(test_bloom_export_size);
+    MU_RUN_TEST(test_bloom_count_set_bits);
+    MU_RUN_TEST(test_bloom_export_size);
     // MU_RUN_TEST(test_bloom_estimate_elements);
 
     /* export, import */
