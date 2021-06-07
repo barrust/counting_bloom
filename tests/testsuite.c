@@ -172,7 +172,7 @@ MU_TEST(test_bloom_check_false_positive) {
         sprintf(key, "%d", i);
         errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_FAILURE ? 0 : 1;
     }
-    mu_assert_int_eq(11, errors);  // there are 11 false positives!
+    mu_assert_int_eq(8, errors);  // there are 8 false positives!
 }
 
 MU_TEST(test_bloom_check_failure) {
@@ -422,7 +422,7 @@ MU_TEST(test_bloom_count_set_bits) {
         sprintf(key, "%d", i);
         counting_bloom_add_string(&cb, key);
     }
-    mu_assert_int_eq(33592, counting_bloom_count_set_bits(&cb));
+    mu_assert_int_eq(33641, counting_bloom_count_set_bits(&cb));
 }
 
 MU_TEST(test_bloom_export_size) {  // size is in bytes
@@ -483,7 +483,7 @@ MU_TEST(test_bloom_export) {
 
     char digest[33] = {0};
     calculate_md5sum(filepath, digest);
-    mu_assert_string_eq("6e434129d9d0238bbb650ff800abfac3", digest);
+    mu_assert_string_eq("cd2c732b4f518545199c44cd25b1dd34", digest);
     mu_assert_int_eq(1917032, fsize(filepath));
     remove(filepath);
 }
@@ -507,7 +507,7 @@ MU_TEST(test_bloom_export_on_disk) {
 
     char digest[33] = {0};
     calculate_md5sum(filepath, digest);
-    mu_assert_string_eq("6e434129d9d0238bbb650ff800abfac3", digest);
+    mu_assert_string_eq("cd2c732b4f518545199c44cd25b1dd34", digest);
     mu_assert_int_eq(1917032, fsize(filepath));
     remove(filepath);
 }
@@ -626,7 +626,7 @@ MU_TEST(test_bloom_filter_stat) {
     is on disk: no\n\
     index fullness: 0.005822\n\
     max index usage: 2\n\
-    max index id: 7890\n\
+    max index id: 2055\n\
     calculated elements: 400\n", buffer);
 }
 

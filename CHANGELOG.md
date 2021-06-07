@@ -1,5 +1,10 @@
 # Counting Bloom Filter
 
+### FUTURE VERSION
+* ***BACKWARD INCOMPATIBLE CHANGES***
+ * Update to the FNV_1a hash function **NOTE:** Breaks backwards compatibility with
+ previously exported blooms using the default hash!
+
 ## Version 1.0.3
 * Full test suite
 * Ensure bloom size to be `uint32_t` instead of `unsigned int`
