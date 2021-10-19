@@ -1,6 +1,6 @@
 # Counting Bloom Filter
 
-### FUTURE VERSION
+### Version 1.1.0
 * ***BACKWARD INCOMPATIBLE CHANGES***
     * **NOTE:** Breaks backwards compatibility with previously exported blooms using the default hash!
     * Update to the FNV_1a hash function
