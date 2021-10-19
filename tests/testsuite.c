@@ -79,6 +79,29 @@ MU_TEST(test_bloom_on_disk_setup_returns) {
 }
 
 /*******************************************************************************
+*   Test hashing
+*******************************************************************************/
+MU_TEST(test_bloom_hashes_values) {
+    uint64_t vals[] = {15902901984413996407ULL, 13757982394814800524ULL, 14025518860217559917ULL, 5646210032526140290ULL, 6127913770875964707ULL};
+    uint64_t* hashes = counting_bloom_calculate_hashes(&cb, "foo", 5);
+    for (int i = 0; i < 5; ++i)
+        mu_assert_int_eq(vals[i], hashes[i]);
+    free(hashes);
+}
+
+MU_TEST(test_bloom_hashes_start_collisions) {
+    // see https://github.com/barrust/pyprobables/issues/62#issue-913502606
+    // the hashes start the same, but we want them to diverge for everything else
+    uint64_t* hashes_foo = counting_bloom_calculate_hashes(&cb, "gMPflVXtwGDXbIhP73TX", 5);
+    uint64_t* hashes_bar = counting_bloom_calculate_hashes(&cb, "LtHf1prlU1bCeYZEdqWf", 5);
+    mu_assert_int_eq(hashes_foo[0], hashes_bar[0]);
+    for (int i = 1; i < 5; ++i)
+        mu_assert_int_not_eq(hashes_foo[i], hashes_bar[i]);
+    free(hashes_foo);
+    free(hashes_bar);
+}
+
+/*******************************************************************************
 *   Test set and check
 *******************************************************************************/
 MU_TEST(test_bloom_set) {
@@ -172,7 +195,7 @@ MU_TEST(test_bloom_check_false_positive) {
         sprintf(key, "%d", i);
         errors += counting_bloom_check_string(&cb, key) == COUNTING_BLOOM_FAILURE ? 0 : 1;
     }
-    mu_assert_int_eq(8, errors);  // there are 8 false positives!
+    mu_assert_int_eq(5, errors);  // there are 5 false positives!
 }
 
 MU_TEST(test_bloom_check_failure) {
@@ -422,7 +445,7 @@ MU_TEST(test_bloom_count_set_bits) {
         sprintf(key, "%d", i);
         counting_bloom_add_string(&cb, key);
     }
-    mu_assert_int_eq(33641, counting_bloom_count_set_bits(&cb));
+    mu_assert_int_eq(32931, counting_bloom_count_set_bits(&cb));
 }
 
 MU_TEST(test_bloom_export_size) {  // size is in bytes
@@ -483,7 +506,7 @@ MU_TEST(test_bloom_export) {
 
     char digest[33] = {0};
     calculate_md5sum(filepath, digest);
-    mu_assert_string_eq("cd2c732b4f518545199c44cd25b1dd34", digest);
+    mu_assert_string_eq("2f654476510dd72810b0cb4142caafda", digest);
     mu_assert_int_eq(1917032, fsize(filepath));
     remove(filepath);
 }
@@ -507,7 +530,7 @@ MU_TEST(test_bloom_export_on_disk) {
 
     char digest[33] = {0};
     calculate_md5sum(filepath, digest);
-    mu_assert_string_eq("cd2c732b4f518545199c44cd25b1dd34", digest);
+    mu_assert_string_eq("2f654476510dd72810b0cb4142caafda", digest);
     mu_assert_int_eq(1917032, fsize(filepath));
     remove(filepath);
 }
@@ -624,9 +647,9 @@ MU_TEST(test_bloom_filter_stat) {
     elements added: 400\n\
     current false positive rate: 0.000000\n\
     is on disk: no\n\
-    index fullness: 0.005822\n\
+    index fullness: 0.005792\n\
     max index usage: 2\n\
-    max index id: 2055\n\
+    max index id: 11460\n\
     calculated elements: 400\n", buffer);
 }
 
@@ -643,6 +666,10 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_setup_returns);
     MU_RUN_TEST(test_bloom_on_disk_setup);
     MU_RUN_TEST(test_bloom_on_disk_setup_returns);
+
+    /* hashes */
+    MU_RUN_TEST(test_bloom_hashes_values);
+    MU_RUN_TEST(test_bloom_hashes_start_collisions);
 
     /* set and contains */
     MU_RUN_TEST(test_bloom_set);
