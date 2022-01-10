@@ -123,6 +123,9 @@ int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned 
         fprintf(stderr, "Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
     }
+    /* NOTE: There are instances of "double" counting when the same idx if found multiple
+            times in a single list of hashes... not sure if this is correct or if that
+            should be checked for and addressed; make sure compatible with pyprobables */
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] < UINT32_MAX) {
