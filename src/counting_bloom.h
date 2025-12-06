@@ -94,7 +94,7 @@ static __inline__ int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t es
 }
 
 /* Print out statistics about the counting bloom filter */
-void counting_bloom_stats(CountingBloom* cb);
+void counting_bloom_stats(const CountingBloom* cb);
 
 /* Release all memory allocated for the counting bloom */
 int counting_bloom_destroy(CountingBloom* cb);
@@ -127,7 +127,7 @@ int counting_bloom_remove_string(CountingBloom* cb, const char* key);
 int counting_bloom_remove_string_alt(CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* Export the current counting bloom to file */
-int counting_bloom_export(CountingBloom* cb, const char* filepath);
+int counting_bloom_export(const CountingBloom* cb, const char* filepath);
 
 /* Import a previously exported counting bloom from a file into memory */
 int counting_bloom_import_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function);

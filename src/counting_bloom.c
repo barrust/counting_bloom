@@ -31,9 +31,9 @@ static const double LOG_TWO_SQUARED = 0.4804530139182;
 static uint64_t* __default_hash(int num_hashes, const char* str);
 static uint64_t __fnv_1a(const char* key, int seed);
 static void __calculate_optimal_hashes(CountingBloom* cb);
-static void __write_to_file(CountingBloom* cb, FILE* fp, short on_disk);
+static void __write_to_file(const CountingBloom* cb, FILE* fp, short on_disk);
 static void __read_from_file(CountingBloom* cb, FILE* fp, short on_disk, const char* filename);
-static void __get_additional_stats(CountingBloom* cb, uint64_t* largest, uint64_t* largest_index,uint64_t* els_added, float *fullness);
+static void __get_additional_stats(const CountingBloom* cb, uint64_t* largest, uint64_t* largest_index,uint64_t* els_added, float *fullness);
 static void __update_elements_added_on_disk(CountingBloom* cb);
 
 
@@ -218,7 +218,7 @@ float counting_bloom_current_false_positive_rate(const CountingBloom* cb) {
     return pow((1 - e), cb->number_hashes);
 }
 
-int counting_bloom_export(CountingBloom* cb, const char* filepath) {
+int counting_bloom_export(const CountingBloom* cb, const char* filepath) {
     if (cb->__is_on_disk == 1) {
         return COUNTING_BLOOM_SUCCESS;
     }
@@ -260,7 +260,7 @@ int counting_bloom_import_on_disk_alt(CountingBloom* cb, const char* filepath, C
     return COUNTING_BLOOM_SUCCESS;
 }
 
-void counting_bloom_stats(CountingBloom* cb) {
+void counting_bloom_stats(const CountingBloom* cb) {
     const char* is_on_disk = (cb->__is_on_disk == 0 ? "no" : "yes");
     uint64_t largest, largest_index, calculated_elements;
     float fullness;
@@ -336,7 +336,7 @@ static uint64_t __fnv_1a(const char* key, int seed) {
 }
 
 /* NOTE: this assumes that the file handler is open and ready to use */
-static void __write_to_file(CountingBloom* cb, FILE* fp, short on_disk) {
+static void __write_to_file(const CountingBloom* cb, FILE* fp, short on_disk) {
     if (on_disk == 0) {
         fwrite(cb->bloom, sizeof(uint32_t), cb->number_bits, fp);
     } else {
@@ -383,8 +383,8 @@ static void __read_from_file(CountingBloom* cb, FILE* fp, short on_disk, const c
     }
 }
 
-static void __get_additional_stats(CountingBloom* cb, uint64_t* largest, uint64_t* largest_index, uint64_t* els_added, float *fullness) {
-    uint64_t i, sum = 0, lar = 0, cnt = 0, lar_idx;
+static void __get_additional_stats(const CountingBloom* cb, uint64_t* largest, uint64_t* largest_index, uint64_t* els_added, float *fullness) {
+    uint64_t i, sum = 0, lar = 0, cnt = 0, lar_idx = 0;
     for (i = 0; i < cb->number_bits; ++i) {
         uint64_t tmp = cb->bloom[i];
         sum += tmp;
