@@ -21,6 +21,7 @@
 
 #include "counting_bloom.h"
 
+typedef char *caddr_t;
 
 static const double LOG_TWO_SQUARED = 0.4804530139182;
 
@@ -118,7 +119,7 @@ int counting_bloom_add_string(CountingBloom* cb, const char* str) {
     return r;
 }
 
-int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+int counting_bloom_add_string_alt(CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed) {
     if (number_hashes_passed < cb->number_hashes) {
         fprintf(stderr, "Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
@@ -137,14 +138,14 @@ int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned 
     return COUNTING_BLOOM_SUCCESS;
 }
 
-int counting_bloom_check_string(CountingBloom* cb, const char* str) {
+int counting_bloom_check_string(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_check_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
 }
 
-int counting_bloom_check_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+int counting_bloom_check_string_alt(const CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed) {
     if (number_hashes_passed < cb->number_hashes) {
         fprintf(stderr, "Error: Not enough hashes were passed!\n");
         return COUNTING_BLOOM_FAILURE;
@@ -161,14 +162,14 @@ int counting_bloom_check_string_alt(CountingBloom* cb, uint64_t* hashes, unsigne
 }
 
 // a better way would be to calculate the hashes only once...
-int counting_bloom_get_max_insertions(CountingBloom* cb, const char* str) {
+int counting_bloom_get_max_insertions(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
     int r = counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
 }
 
-int counting_bloom_get_max_insertions_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+int counting_bloom_get_max_insertions_alt(const CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed) {
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return 0; // this means it isn't present; fail-quick
     }
@@ -191,7 +192,7 @@ int counting_bloom_remove_string(CountingBloom* cb, const char* str) {
     return r;
 }
 
-int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed) {
+int counting_bloom_remove_string_alt(CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed) {
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
     }
@@ -206,11 +207,11 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsign
     return COUNTING_BLOOM_SUCCESS;
 }
 
-uint64_t* counting_bloom_calculate_hashes(CountingBloom* cb, const char* str, unsigned int number_hashes) {
+uint64_t* counting_bloom_calculate_hashes(const CountingBloom* cb, const char* str, unsigned int number_hashes) {
     return cb->hash_function(number_hashes, str);
 }
 
-float counting_bloom_current_false_positive_rate(CountingBloom* cb) {
+float counting_bloom_current_false_positive_rate(const CountingBloom* cb) {
     int num = cb->number_hashes * cb->elements_added;
     double d = -num / (float) cb->number_bits;
     double e = exp(d);
@@ -286,7 +287,7 @@ void counting_bloom_stats(CountingBloom* cb) {
     fullness, largest, largest_index, calculated_elements);
 }
 
-uint64_t counting_bloom_count_set_bits(CountingBloom* cb) {
+uint64_t counting_bloom_count_set_bits(const CountingBloom* cb) {
     uint64_t res = 0;
     for (uint64_t i = 0; i < cb->number_bits; ++i) {
         res += cb->bloom[i] > 0 ? 1 : 0;
@@ -294,7 +295,7 @@ uint64_t counting_bloom_count_set_bits(CountingBloom* cb) {
     return res;
 }
 
-uint64_t counting_bloom_export_size(CountingBloom* cb) {
+uint64_t counting_bloom_export_size(const CountingBloom* cb) {
     return (uint64_t)((cb->number_bits * sizeof(uint32_t)) + (2 * sizeof(uint32_t)) + sizeof(float));
 }
 

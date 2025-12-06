@@ -3,7 +3,7 @@
 #include <stdlib.h>         /* calloc, malloc */
 #include <stdio.h>          /* printf */
 #include <string.h>         /* strlen */
-#include <openssl/sha.h>
+#include <openssl/evp.h>
 
 #include "../src/counting_bloom.h"
 
@@ -21,16 +21,28 @@ uint64_t* sha256_hash(int num_hashes, const char *str) {
 		tmp_str[i] = toupper(str[i]);
 	}
 	uint64_t *results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
-	unsigned char digest[SHA256_DIGEST_LENGTH];
+	unsigned char digest[32]; // SHA256_DIGEST_LENGTH is 32
 	for (int i = 0; i < num_hashes; i++) {
-		SHA256_CTX sha256_ctx;
-		SHA256_Init(&sha256_ctx);
-		if (i == 0) {
-			SHA256_Update(&sha256_ctx, tmp_str, strlen(tmp_str));
-		} else {
-			SHA256_Update(&sha256_ctx, digest, SHA256_DIGEST_LENGTH);
+		EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
+		if (mdctx == NULL) {
+			free(tmp_str);
+			free(results);
+			return NULL;
 		}
-		SHA256_Final(digest, &sha256_ctx);
+		if (EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL) != 1) {
+			EVP_MD_CTX_free(mdctx);
+			free(tmp_str);
+			free(results);
+			return NULL;
+		}
+		if (i == 0) {
+			EVP_DigestUpdate(mdctx, tmp_str, strlen(tmp_str));
+		} else {
+			EVP_DigestUpdate(mdctx, digest, 32);
+		}
+		unsigned int md_len = 0;
+		EVP_DigestFinal_ex(mdctx, digest, &md_len);
+		EVP_MD_CTX_free(mdctx);
 		results[i] = (uint64_t) *(uint64_t *)digest;
 	}
 	free(tmp_str);
