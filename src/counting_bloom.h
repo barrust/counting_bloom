@@ -94,7 +94,7 @@ static __inline__ int counting_bloom_init_on_disk(CountingBloom* cb, uint64_t es
 }
 
 /* Print out statistics about the counting bloom filter */
-void counting_bloom_stats(CountingBloom* cb);
+void counting_bloom_stats(const CountingBloom* cb);
 
 /* Release all memory allocated for the counting bloom */
 int counting_bloom_destroy(CountingBloom* cb);
@@ -106,28 +106,28 @@ int counting_bloom_clear(CountingBloom* cb);
 int counting_bloom_add_string(CountingBloom* cb, const char* key);
 
 /* Add a string to a counting bloom filter using the passed hashes */
-int counting_bloom_add_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed);
+int counting_bloom_add_string_alt(CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* Check to see if a string (or element) is or is not in the counting bloom */
-int counting_bloom_check_string(CountingBloom* cb, const char* key);
+int counting_bloom_check_string(const CountingBloom* cb, const char* key);
 
 /* Check if a string is in the counting bloom using the passed hashes */
-int counting_bloom_check_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed);
+int counting_bloom_check_string_alt(const CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* Determine the maximum number of times a string could have been inserted */
-int counting_bloom_get_max_insertions(CountingBloom* cb, const char* key);
+int counting_bloom_get_max_insertions(const CountingBloom* cb, const char* key);
 
 /* Determine the maximum number of times an element could have been inserted based on the passed hashes */
-int counting_bloom_get_max_insertions_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed);
+int counting_bloom_get_max_insertions_alt(const CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* Remove a string from the counting bloom */
 int counting_bloom_remove_string(CountingBloom* cb, const char* key);
 
 /* Remove an element from the counting bloom based on the passed hashes */
-int counting_bloom_remove_string_alt(CountingBloom* cb, uint64_t* hashes, unsigned int number_hashes_passed);
+int counting_bloom_remove_string_alt(CountingBloom* cb, const uint64_t* hashes, unsigned int number_hashes_passed);
 
 /* Export the current counting bloom to file */
-int counting_bloom_export(CountingBloom* cb, const char* filepath);
+int counting_bloom_export(const CountingBloom* cb, const char* filepath);
 
 /* Import a previously exported counting bloom from a file into memory */
 int counting_bloom_import_alt(CountingBloom* cb, const char* filepath, CountBloomHashFunction hash_function);
@@ -146,7 +146,7 @@ static __inline__ int counting_bloom_import_on_disk(CountingBloom* cb, const cha
 }
 
 /* Calculates the current false positive rate based on the number of inserted elements */
-float counting_bloom_current_false_positive_rate(CountingBloom* cb);
+float counting_bloom_current_false_positive_rate(const CountingBloom* cb);
 
 /*
     Generate the number of hashes using the counting blooms hashing function. This is
@@ -155,13 +155,13 @@ float counting_bloom_current_false_positive_rate(CountingBloom* cb);
 
     NOTE: It is up to the caller to free the allocated memory
 */
-uint64_t* counting_bloom_calculate_hashes(CountingBloom* cb, const char* key, unsigned int number_hashes);
+uint64_t* counting_bloom_calculate_hashes(const CountingBloom* cb, const char* key, unsigned int number_hashes);
 
 /* Count the number of bits set to 1 (i.e., greater than 0) */
-uint64_t counting_bloom_count_set_bits(CountingBloom* cb);
+uint64_t counting_bloom_count_set_bits(const CountingBloom* cb);
 
 /* Calculate the size the bloom filter will take on disk when exported in bytes */
-uint64_t counting_bloom_export_size(CountingBloom* cb);
+uint64_t counting_bloom_export_size(const CountingBloom* cb);
 
 
 #ifdef __cplusplus
