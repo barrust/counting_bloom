@@ -5,6 +5,7 @@
 * Fix: `elements_added` no longer wraps around when removing with a count of 0
 * Fix: `counting_bloom_current_false_positive_rate()` overflowed an `int` once the number of hashes times the elements added passed `INT_MAX`, returning a wrong (even negative) rate
 * Fix: a false positive rate above about 0.7 gave 0 hashes, so every check succeeded; `counting_bloom_init()` and `counting_bloom_init_on_disk()` now fail (check the return value before using the filter)
+* Fix: a failed hash allocation is now returned as a failure instead of dereferencing `NULL`; `counting_bloom_calculate_hashes()` returns `NULL` if the memory cannot be allocated
 
 ### Version 1.1.0
 * ***BACKWARD INCOMPATIBLE CHANGES***
