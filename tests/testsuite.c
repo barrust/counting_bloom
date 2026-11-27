@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -310,6 +311,118 @@ MU_TEST(test_bloom_remove_fail) {
 
     mu_assert_int_eq(0, errors);
     mu_assert_int_eq(0, cb.elements_added);
+}
+
+/* "12" hashes to indices 27, 53, 27, and 50 in a filter for 10 elements at 0.05, so index 27
+   is decremented twice when it is removed */
+static void __key_twelve_indices(const CountingBloom* c, uint64_t* idx) {
+    uint64_t* hashes = counting_bloom_calculate_hashes(c, "12", c->number_hashes);
+    for (unsigned int i = 0; i < c->number_hashes; ++i) {
+        idx[i] = hashes[i] % c->number_bits;
+    }
+    free(hashes);
+}
+
+MU_TEST(test_bloom_remove_repeated_index_fail) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    mu_assert_int_eq(63, c.number_bits);
+    mu_assert_int_eq(4, c.number_hashes);
+    uint64_t idx[4];
+    __key_twelve_indices(&c, idx);
+    mu_assert_int_eq(27, idx[0]);
+    mu_assert_int_eq(53, idx[1]);
+    mu_assert_int_eq(27, idx[2]);
+    mu_assert_int_eq(50, idx[3]);
+
+    /* "12" was not added (adding it puts 2 in index 27), but other keys make it look present: a false
+       positive. Removing it would take index 27 below zero, so it must fail and change nothing */
+    c.bloom[27] = 1;
+    c.bloom[53] = 5;
+    c.bloom[50] = 5;
+    c.elements_added = 3;
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_remove_string(&c, "12"));
+    mu_assert_int_eq(1, c.bloom[27]);  /* it went 1, 0, then wrapped around to UINT32_MAX */
+    mu_assert_int_eq(5, c.bloom[53]);
+    mu_assert_int_eq(5, c.bloom[50]);
+    mu_assert_int_eq(3, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_remove_repeated_index) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_add_string(&c, "12"));
+    mu_assert_int_eq(2, c.bloom[27]);  /* once per appearance in the hashes */
+    mu_assert_int_eq(1, c.bloom[53]);
+    mu_assert_int_eq(1, c.bloom[50]);
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_remove_string(&c, "12"));
+    uint64_t total = 0;
+    for (uint64_t i = 0; i < c.number_bits; ++i) {
+        total += c.bloom[i];
+    }
+    mu_assert_int_eq(0, total);
+    mu_assert_int_eq(0, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_remove_elements_added_zero) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    counting_bloom_add_string(&c, "12");
+    c.elements_added = 0;  /* e.g. a filter built from data without its count */
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_remove_string(&c, "12"));
+    mu_assert(c.elements_added == 0, "elements_added wrapped around");
+    counting_bloom_destroy(&c);
+}
+
+/* a hash function that cannot allocate its results */
+static uint64_t* __null_hash(int num_hashes, const char* str) {
+    (void)num_hashes;
+    (void)str;
+    return NULL;
+}
+
+MU_TEST(test_bloom_hash_allocation_failure) {
+    CountingBloom c;
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_init_alt(&c, 100, 0.05, __null_hash));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_add_string(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_check_string(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_get_max_insertions(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_remove_string(&c, "test"));
+    mu_assert_int_eq(0, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_init_zero_hashes) {
+    CountingBloom c;
+    /* a false positive rate above about 0.7 gives 0 hashes, and every check would succeed */
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_init(&c, 1000, 0.9));
+    char filepath[] = "./dist/test_counting_bloom_init_zero_hashes.cbm";
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_init_on_disk(&c, 1000, 0.9, filepath));
+    struct stat st;
+    mu_assert_int_eq(-1, stat(filepath, &st));  /* no file is created */
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_init(&c, 1000, 0.5));
+    mu_assert_int_eq(1, c.number_hashes);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_current_false_positive_rate_large) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    /*  The rate only uses these values, so use those of a filter for a billion elements at 0.01
+        holding 400 million, without allocating it: 7 * 400 million does not fit in an int */
+    unsigned int hashes = c.number_hashes;
+    c.number_hashes = 7;
+    c.number_bits = 9585058378ULL;
+    c.elements_added = 400000000ULL;
+    double expected = pow(1 - exp(-7.0 * 400000000.0 / 9585058378.0), 7);
+    mu_assert_double_between(expected * 0.999, expected * 1.001, counting_bloom_current_false_positive_rate(&c));
+    c.number_hashes = hashes;
+    c.number_bits = 63;
+    counting_bloom_destroy(&c);
 }
 
 MU_TEST(test_bloom_remove_on_disk_with_failures) {
@@ -684,6 +797,12 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_remove);
     MU_RUN_TEST(test_bloom_remove_fail);
     MU_RUN_TEST(test_bloom_remove_on_disk_with_failures);
+    MU_RUN_TEST(test_bloom_remove_repeated_index_fail);
+    MU_RUN_TEST(test_bloom_remove_repeated_index);
+    MU_RUN_TEST(test_bloom_remove_elements_added_zero);
+    MU_RUN_TEST(test_bloom_init_zero_hashes);
+    MU_RUN_TEST(test_bloom_current_false_positive_rate_large);
+    MU_RUN_TEST(test_bloom_hash_allocation_failure);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 

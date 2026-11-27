@@ -50,6 +50,9 @@ int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, floa
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
+    if (cb->number_hashes == 0) {  // a false positive rate above about 0.7; every check would succeed
+        return COUNTING_BLOOM_FAILURE;
+    }
     cb->bloom = (uint32_t*)calloc(cb->number_bits, sizeof(uint32_t));
     cb->elements_added = 0;
     cb->__is_on_disk = 0;
@@ -68,6 +71,9 @@ int counting_bloom_init_on_disk_alt(CountingBloom* cb, uint64_t estimated_elemen
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
+    if (cb->number_hashes == 0) {  // a false positive rate above about 0.7; every check would succeed
+        return COUNTING_BLOOM_FAILURE;
+    }
     cb->elements_added = 0;
     cb->__is_on_disk = 1;
     cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
@@ -114,6 +120,9 @@ int counting_bloom_clear(CountingBloom* cb) {
 
 int counting_bloom_add_string(CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_add_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -140,6 +149,9 @@ int counting_bloom_add_string_alt(CountingBloom* cb, const uint64_t* hashes, uns
 
 int counting_bloom_check_string(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_check_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -164,6 +176,9 @@ int counting_bloom_check_string_alt(const CountingBloom* cb, const uint64_t* has
 // a better way would be to calculate the hashes only once...
 int counting_bloom_get_max_insertions(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -187,6 +202,9 @@ int counting_bloom_get_max_insertions_alt(const CountingBloom* cb, const uint64_
 
 int counting_bloom_remove_string(CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_remove_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -196,13 +214,33 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, const uint64_t* hashes, 
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
     }
+    /* An index is decremented once for each time it appears in the hashes (as it is incremented
+       when added), so make sure every index can be before changing any; otherwise a key that was
+       not added (a false positive) can take an index below zero and wrap it around to UINT32_MAX */
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
+        uint64_t idx = hashes[i] % cb->number_bits;
+        if (cb->bloom[idx] == UINT32_MAX) {
+            continue;  // saturated indices are not decremented
+        }
+        uint32_t times = 0;
+        for (unsigned int j = 0; j < cb->number_hashes; ++j) {
+            if (hashes[j] % cb->number_bits == idx) {
+                ++times;
+            }
+        }
+        if (cb->bloom[idx] < times) {
+            return COUNTING_BLOOM_FAILURE;
+        }
+    }
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] != UINT32_MAX) {
             --cb->bloom[idx];
         }
     }
-    --cb->elements_added;
+    if (cb->elements_added > 0) {
+        --cb->elements_added;
+    }
     __update_elements_added_on_disk(cb);
     return COUNTING_BLOOM_SUCCESS;
 }
@@ -212,10 +250,11 @@ uint64_t* counting_bloom_calculate_hashes(const CountingBloom* cb, const char* s
 }
 
 float counting_bloom_current_false_positive_rate(const CountingBloom* cb) {
-    int num = cb->number_hashes * cb->elements_added;
-    double d = -num / (float) cb->number_bits;
+    // in floating point: the product of the hashes and elements added can be larger than an int
+    double num = (double)cb->number_hashes * (double)cb->elements_added;
+    double d = -num / (double)cb->number_bits;
     double e = exp(d);
-    return pow((1 - e), cb->number_hashes);
+    return (float)pow((1 - e), cb->number_hashes);
 }
 
 int counting_bloom_export(const CountingBloom* cb, const char* filepath) {
@@ -317,6 +356,9 @@ static void __calculate_optimal_hashes(CountingBloom* cb) {
 /* NOTE: The caller will free the results */
 static uint64_t* __default_hash(int num_hashes, const char* str) {
     uint64_t* results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
+    if (results == NULL) {  // out of memory; the callers return a failure
+        return NULL;
+    }
     int i;
     for (i = 0; i < num_hashes; ++i) {
         results[i] = __fnv_1a(str, i);
