@@ -154,6 +154,7 @@ float counting_bloom_current_false_positive_rate(const CountingBloom* cb);
     blooms that use the same hash function.
 
     NOTE: It is up to the caller to free the allocated memory
+    NOTE: Returns NULL if the memory cannot be allocated
 */
 uint64_t* counting_bloom_calculate_hashes(const CountingBloom* cb, const char* key, unsigned int number_hashes);
 

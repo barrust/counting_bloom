@@ -120,6 +120,9 @@ int counting_bloom_clear(CountingBloom* cb) {
 
 int counting_bloom_add_string(CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_add_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -146,6 +149,9 @@ int counting_bloom_add_string_alt(CountingBloom* cb, const uint64_t* hashes, uns
 
 int counting_bloom_check_string(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_check_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -170,6 +176,9 @@ int counting_bloom_check_string_alt(const CountingBloom* cb, const uint64_t* has
 // a better way would be to calculate the hashes only once...
 int counting_bloom_get_max_insertions(const CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_get_max_insertions_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -193,6 +202,9 @@ int counting_bloom_get_max_insertions_alt(const CountingBloom* cb, const uint64_
 
 int counting_bloom_remove_string(CountingBloom* cb, const char* str) {
     uint64_t* hashes = counting_bloom_calculate_hashes(cb, str, cb->number_hashes);
+    if (hashes == NULL) {  // the hash function could not allocate the hashes
+        return COUNTING_BLOOM_FAILURE;
+    }
     int r = counting_bloom_remove_string_alt(cb, hashes, cb->number_hashes);
     free(hashes);
     return r;
@@ -344,6 +356,9 @@ static void __calculate_optimal_hashes(CountingBloom* cb) {
 /* NOTE: The caller will free the results */
 static uint64_t* __default_hash(int num_hashes, const char* str) {
     uint64_t* results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
+    if (results == NULL) {  // out of memory; the callers return a failure
+        return NULL;
+    }
     int i;
     for (i = 0; i < num_hashes; ++i) {
         results[i] = __fnv_1a(str, i);

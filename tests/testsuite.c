@@ -377,6 +377,24 @@ MU_TEST(test_bloom_remove_elements_added_zero) {
     counting_bloom_destroy(&c);
 }
 
+/* a hash function that cannot allocate its results */
+static uint64_t* __null_hash(int num_hashes, const char* str) {
+    (void)num_hashes;
+    (void)str;
+    return NULL;
+}
+
+MU_TEST(test_bloom_hash_allocation_failure) {
+    CountingBloom c;
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_init_alt(&c, 100, 0.05, __null_hash));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_add_string(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_check_string(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_get_max_insertions(&c, "test"));
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_remove_string(&c, "test"));
+    mu_assert_int_eq(0, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
 MU_TEST(test_bloom_init_zero_hashes) {
     CountingBloom c;
     /* a false positive rate above about 0.7 gives 0 hashes, and every check would succeed */
@@ -784,6 +802,7 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_remove_elements_added_zero);
     MU_RUN_TEST(test_bloom_init_zero_hashes);
     MU_RUN_TEST(test_bloom_current_false_positive_rate_large);
+    MU_RUN_TEST(test_bloom_hash_allocation_failure);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
