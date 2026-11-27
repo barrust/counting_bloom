@@ -1,5 +1,9 @@
 # Counting Bloom Filter
 
+### Version 1.1.1 (unreleased)
+* Fix: removing a key that was not added (a false positive) whose hashes repeat an index could take that index below zero, wrapping it around to `UINT32_MAX`; `counting_bloom_remove_string_alt()` now fails without changing the filter
+* Fix: `elements_added` no longer wraps around when removing with a count of 0
+
 ### Version 1.1.0
 * ***BACKWARD INCOMPATIBLE CHANGES***
     * **NOTE:** Breaks backwards compatibility with previously exported blooms using the default hash!

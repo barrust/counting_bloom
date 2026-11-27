@@ -196,13 +196,33 @@ int counting_bloom_remove_string_alt(CountingBloom* cb, const uint64_t* hashes, 
     if (counting_bloom_check_string_alt(cb, hashes, number_hashes_passed) == COUNTING_BLOOM_FAILURE) {
         return COUNTING_BLOOM_FAILURE; // this means it isn't present; fail-quick
     }
+    /* An index is decremented once for each time it appears in the hashes (as it is incremented
+       when added), so make sure every index can be before changing any; otherwise a key that was
+       not added (a false positive) can take an index below zero and wrap it around to UINT32_MAX */
+    for (unsigned int i = 0; i < cb->number_hashes; ++i) {
+        uint64_t idx = hashes[i] % cb->number_bits;
+        if (cb->bloom[idx] == UINT32_MAX) {
+            continue;  // saturated indices are not decremented
+        }
+        uint32_t times = 0;
+        for (unsigned int j = 0; j < cb->number_hashes; ++j) {
+            if (hashes[j] % cb->number_bits == idx) {
+                ++times;
+            }
+        }
+        if (cb->bloom[idx] < times) {
+            return COUNTING_BLOOM_FAILURE;
+        }
+    }
     for (unsigned int i = 0; i < cb->number_hashes; ++i) {
         uint64_t idx = hashes[i] % cb->number_bits;
         if (cb->bloom[idx] != UINT32_MAX) {
             --cb->bloom[idx];
         }
     }
-    --cb->elements_added;
+    if (cb->elements_added > 0) {
+        --cb->elements_added;
+    }
     __update_elements_added_on_disk(cb);
     return COUNTING_BLOOM_SUCCESS;
 }

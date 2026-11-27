@@ -312,6 +312,70 @@ MU_TEST(test_bloom_remove_fail) {
     mu_assert_int_eq(0, cb.elements_added);
 }
 
+/* "12" hashes to indices 27, 53, 27, and 50 in a filter for 10 elements at 0.05, so index 27
+   is decremented twice when it is removed */
+static void __key_twelve_indices(const CountingBloom* c, uint64_t* idx) {
+    uint64_t* hashes = counting_bloom_calculate_hashes(c, "12", c->number_hashes);
+    for (unsigned int i = 0; i < c->number_hashes; ++i) {
+        idx[i] = hashes[i] % c->number_bits;
+    }
+    free(hashes);
+}
+
+MU_TEST(test_bloom_remove_repeated_index_fail) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    mu_assert_int_eq(63, c.number_bits);
+    mu_assert_int_eq(4, c.number_hashes);
+    uint64_t idx[4];
+    __key_twelve_indices(&c, idx);
+    mu_assert_int_eq(27, idx[0]);
+    mu_assert_int_eq(53, idx[1]);
+    mu_assert_int_eq(27, idx[2]);
+    mu_assert_int_eq(50, idx[3]);
+
+    /* "12" was not added (adding it puts 2 in index 27), but other keys make it look present: a false
+       positive. Removing it would take index 27 below zero, so it must fail and change nothing */
+    c.bloom[27] = 1;
+    c.bloom[53] = 5;
+    c.bloom[50] = 5;
+    c.elements_added = 3;
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_remove_string(&c, "12"));
+    mu_assert_int_eq(1, c.bloom[27]);  /* it went 1, 0, then wrapped around to UINT32_MAX */
+    mu_assert_int_eq(5, c.bloom[53]);
+    mu_assert_int_eq(5, c.bloom[50]);
+    mu_assert_int_eq(3, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_remove_repeated_index) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_add_string(&c, "12"));
+    mu_assert_int_eq(2, c.bloom[27]);  /* once per appearance in the hashes */
+    mu_assert_int_eq(1, c.bloom[53]);
+    mu_assert_int_eq(1, c.bloom[50]);
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_remove_string(&c, "12"));
+    uint64_t total = 0;
+    for (uint64_t i = 0; i < c.number_bits; ++i) {
+        total += c.bloom[i];
+    }
+    mu_assert_int_eq(0, total);
+    mu_assert_int_eq(0, c.elements_added);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_remove_elements_added_zero) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    counting_bloom_add_string(&c, "12");
+    c.elements_added = 0;  /* e.g. a filter built from data without its count */
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_remove_string(&c, "12"));
+    mu_assert(c.elements_added == 0, "elements_added wrapped around");
+    counting_bloom_destroy(&c);
+}
+
 MU_TEST(test_bloom_remove_on_disk_with_failures) {
     /*  set on disk is different than in memory because some values have to be
         updated on disk; so this must be tested seperately */
@@ -684,6 +748,9 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_remove);
     MU_RUN_TEST(test_bloom_remove_fail);
     MU_RUN_TEST(test_bloom_remove_on_disk_with_failures);
+    MU_RUN_TEST(test_bloom_remove_repeated_index_fail);
+    MU_RUN_TEST(test_bloom_remove_repeated_index);
+    MU_RUN_TEST(test_bloom_remove_elements_added_zero);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
