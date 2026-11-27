@@ -80,7 +80,7 @@ typedef struct counting_bloom_filter {
     and hash numbers.
 
     Estimated elements is 0 < x <= UINT64_MAX.
-    False positive rate is 0.0 < x < 1.0
+    False positive rate is 0.0 < x < 1.0; a rate above about 0.7 gives 0 hashes and fails
 */
 int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate, CountBloomHashFunction hash_function);
 static __inline__ int counting_bloom_init(CountingBloom* cb, uint64_t estimated_elements, float false_positive_rate) {

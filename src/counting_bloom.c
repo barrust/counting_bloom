@@ -50,6 +50,9 @@ int counting_bloom_init_alt(CountingBloom* cb, uint64_t estimated_elements, floa
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
+    if (cb->number_hashes == 0) {  // a false positive rate above about 0.7; every check would succeed
+        return COUNTING_BLOOM_FAILURE;
+    }
     cb->bloom = (uint32_t*)calloc(cb->number_bits, sizeof(uint32_t));
     cb->elements_added = 0;
     cb->__is_on_disk = 0;
@@ -68,6 +71,9 @@ int counting_bloom_init_on_disk_alt(CountingBloom* cb, uint64_t estimated_elemen
     cb->estimated_elements = estimated_elements;
     cb->false_positive_probability = false_positive_rate;
     __calculate_optimal_hashes(cb);
+    if (cb->number_hashes == 0) {  // a false positive rate above about 0.7; every check would succeed
+        return COUNTING_BLOOM_FAILURE;
+    }
     cb->elements_added = 0;
     cb->__is_on_disk = 1;
     cb->hash_function = (hash_function == NULL) ? __default_hash : hash_function;
@@ -232,10 +238,11 @@ uint64_t* counting_bloom_calculate_hashes(const CountingBloom* cb, const char* s
 }
 
 float counting_bloom_current_false_positive_rate(const CountingBloom* cb) {
-    int num = cb->number_hashes * cb->elements_added;
-    double d = -num / (float) cb->number_bits;
+    // in floating point: the product of the hashes and elements added can be larger than an int
+    double num = (double)cb->number_hashes * (double)cb->elements_added;
+    double d = -num / (double)cb->number_bits;
     double e = exp(d);
-    return pow((1 - e), cb->number_hashes);
+    return (float)pow((1 - e), cb->number_hashes);
 }
 
 int counting_bloom_export(const CountingBloom* cb, const char* filepath) {

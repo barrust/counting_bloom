@@ -3,6 +3,8 @@
 ### Version 1.1.1 (unreleased)
 * Fix: removing a key that was not added (a false positive) whose hashes repeat an index could take that index below zero, wrapping it around to `UINT32_MAX`; `counting_bloom_remove_string_alt()` now fails without changing the filter
 * Fix: `elements_added` no longer wraps around when removing with a count of 0
+* Fix: `counting_bloom_current_false_positive_rate()` overflowed an `int` once the number of hashes times the elements added passed `INT_MAX`, returning a wrong (even negative) rate
+* Fix: a false positive rate above about 0.7 gave 0 hashes, so every check succeeded; `counting_bloom_init()` and `counting_bloom_init_on_disk()` now fail (check the return value before using the filter)
 
 ### Version 1.1.0
 * ***BACKWARD INCOMPATIBLE CHANGES***

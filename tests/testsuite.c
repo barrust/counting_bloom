@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <math.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -373,6 +374,36 @@ MU_TEST(test_bloom_remove_elements_added_zero) {
     c.elements_added = 0;  /* e.g. a filter built from data without its count */
     mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_remove_string(&c, "12"));
     mu_assert(c.elements_added == 0, "elements_added wrapped around");
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_init_zero_hashes) {
+    CountingBloom c;
+    /* a false positive rate above about 0.7 gives 0 hashes, and every check would succeed */
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_init(&c, 1000, 0.9));
+    char filepath[] = "./dist/test_counting_bloom_init_zero_hashes.cbm";
+    mu_assert_int_eq(COUNTING_BLOOM_FAILURE, counting_bloom_init_on_disk(&c, 1000, 0.9, filepath));
+    struct stat st;
+    mu_assert_int_eq(-1, stat(filepath, &st));  /* no file is created */
+
+    mu_assert_int_eq(COUNTING_BLOOM_SUCCESS, counting_bloom_init(&c, 1000, 0.5));
+    mu_assert_int_eq(1, c.number_hashes);
+    counting_bloom_destroy(&c);
+}
+
+MU_TEST(test_bloom_current_false_positive_rate_large) {
+    CountingBloom c;
+    counting_bloom_init(&c, 10, 0.05);
+    /*  The rate only uses these values, so use those of a filter for a billion elements at 0.01
+        holding 400 million, without allocating it: 7 * 400 million does not fit in an int */
+    unsigned int hashes = c.number_hashes;
+    c.number_hashes = 7;
+    c.number_bits = 9585058378ULL;
+    c.elements_added = 400000000ULL;
+    double expected = pow(1 - exp(-7.0 * 400000000.0 / 9585058378.0), 7);
+    mu_assert_double_between(expected * 0.999, expected * 1.001, counting_bloom_current_false_positive_rate(&c));
+    c.number_hashes = hashes;
+    c.number_bits = 63;
     counting_bloom_destroy(&c);
 }
 
@@ -751,6 +782,8 @@ MU_TEST_SUITE(test_suite) {
     MU_RUN_TEST(test_bloom_remove_repeated_index_fail);
     MU_RUN_TEST(test_bloom_remove_repeated_index);
     MU_RUN_TEST(test_bloom_remove_elements_added_zero);
+    MU_RUN_TEST(test_bloom_init_zero_hashes);
+    MU_RUN_TEST(test_bloom_current_false_positive_rate_large);
     // MU_RUN_TEST(test_bloom_overflow); // How? currently can't add a lot at once
 
 
